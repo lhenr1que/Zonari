@@ -14,6 +14,24 @@ KWin-style window management for Hyprland: window snapping, custom zones, title 
 
 Application minimum sizes still apply. A window wider than a zone may overlap its neighbour; Zonari keeps it within the screen. Native plugins must be rebuilt after Hyprland updates.
 
+## Screenshots
+
+Real captures on Omarchy with Hyprland 0.56.2. Zonari's interface is shown in English.
+
+**Snap Assist** — after snapping a window, choose another window for the empty zone.
+
+![Snap Assist offering Zonari settings for the empty right-hand zone](docs/images/snap-assist.png)
+
+**Alt+Tab** — the optional window switcher; disable it in settings to use Omarchy's switcher.
+
+![Zonari Alt+Tab switcher with the selected window highlighted](docs/images/alt-tab.png)
+
+**Zone editor** — create custom snapping layouts.
+
+![Zonari custom zone editor](docs/images/zone-editor.png)
+
+[Title-bar settings](docs/images/settings.png) · [Snapping and switcher settings](docs/images/snapping-settings.png)
+
 ## Install
 
 ```sh
