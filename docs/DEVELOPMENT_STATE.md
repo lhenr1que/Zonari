@@ -4,7 +4,7 @@ Nome escolhido pelo dono: Zonari, evitando o projeto OmniWM para macOS. Renomea�
 
 Correção de tamanho mínimo já commitada: 010e7b1 e 7af8e51. OpenBot impõe 960 px de largura; uma zona de um terço não pode reduzir isso. O núcleo preserva o mínimo e corrige a posição inclusive quando o app informa o mínimo depois. A sessão anterior registrou teste ao vivo e restauração da janela.
 
-Validação e instalação desta continuação: em andamento. Sem push autorizado. Repositório local agora Zonari, branch omarchy-plugin-0.57.2. Preservar registros históricos e configurações antigas. Teste após novo login permanece pendente.
+Validação desta continuação: scripts/check.sh completo passou (Lua, testes de shell, Rust e build C++ 0.56.2); teste de migração vermelho/verde em docs/omarchy-plugin/evidence/zonari-*.txt. Commit da renomeação: 2673e87. Instalação Zonari em andamento; backup pré-migração em ~/.local/state/zonari-backup/rename-20261117. Sem push autorizado. Repositório local agora Zonari, branch omarchy-plugin-0.57.2. Preservar registros históricos e configurações antigas. Teste após novo login permanece pendente.
 
 ## GitHub Actions — 01/11/2026
 

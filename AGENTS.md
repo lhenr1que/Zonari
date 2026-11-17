@@ -1,6 +1,6 @@
 # Zonari: regras para agentes (Claude Code, Codex)
 
-Gerenciamento de janelas estilo KDE para o Hyprland 0.57 (a linha 0.56.2 fica no histórico do Git), em três camadas: `zonari-bars/` (C++), `zonari-core/` (Lua), `zonari-ui/` (Rust GTK4).
+Gerenciamento de janelas estilo KDE para o Hyprland 0.56.2 e 0.57+ (barras específicas em `zonari-bars-0.56/` e `zonari-bars/`), em três camadas: `zonari-bars/` (C++), `zonari-core/` (Lua), `zonari-ui/` (Rust GTK4).
 
 ## Ler antes de mexer
 1. [Mapa documental](docs/README.md), [arquitetura atual](docs/ARCHITECTURE.md) e `docs/STATUS.md`, seção "Para a próxima sessão": implementação, estado e próximos passos.
