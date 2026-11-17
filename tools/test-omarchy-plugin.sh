@@ -157,8 +157,19 @@ else bad "setup: hypervi.lua missing or invalid Lua: $(cat "$t/luac" 2>/dev/null
 grep -qF "$root/core/?.lua" "$inc" 2>/dev/null && ok "hypervi.lua: core from the plugin checkout" || bad "hypervi.lua: core path is not $root/core"
 grep -qF "hl.plugin.load" "$inc" 2>/dev/null && grep -qF "$h/.local/share/hypervi/kwinish-bars.so" "$inc" && ok "hypervi.lua: loads the built plugin" \
   || bad "hypervi.lua: does not load $h/.local/share/hypervi/kwinish-bars.so"
-grep -qF 'mod = "SUPER + CTRL + SHIFT"' "$inc" 2>/dev/null && ok "hypervi.lua: binds on SUPER + CTRL + SHIFT (no Omarchy default uses it)" \
-  || bad "hypervi.lua: default mod must be SUPER + CTRL + SHIFT"
+lua "$root/tools/testdata/omarchy-binds.lua" "$inc" "$root/core" >"$t/binds" 2>"$t/binds.err" || bad "hypervi.lua binds could not be read: $(cat "$t/binds.err")"
+dups=$(cut -d= -f2 "$t/binds" | sort | uniq -d)
+[ -s "$t/binds" ] && [ -z "$dups" ] && ok "hypervi.lua: $(wc -l <"$t/binds") binds, no two on the same keys" || bad "hypervi.lua: binds on the same keys: $dups"
+for want in tile:left=ALT+CTRL+SUPER+LEFT tile:right=ALT+CTRL+SUPER+RIGHT tile:top=ALT+CTRL+SUPER+UP tile:bottom=ALT+CTRL+SUPER+DOWN \
+  tile:topleft=ALT+CTRL+SUPER+U tile:topright=ALT+CTRL+SUPER+I tile:bottomleft=ALT+CTRL+SUPER+J tile:bottomright=ALT+CTRL+SUPER+K \
+  tile:max=ALT+CTRL+SUPER+RETURN pack:left=ALT+CTRL+SHIFT+SUPER+LEFT show_desktop:=ALT+CTRL+SUPER+M layouts:=ALT+CTRL+SUPER+L; do
+  grep -qxF "$want" "$t/binds" && ok "bind $want" || bad "bind $want missing (got: $(grep "^${want%%=*}=" "$t/binds"))"
+done
+# Omarchy 4.5 uses these (hyprctl binds, 16/11/2026): none of ours may land on them
+for used in CTRL+SHIFT+SUPER+LEFT CTRL+SHIFT+SUPER+A CTRL+SHIFT+SUPER+D CTRL+SHIFT+SUPER+T ALT+CTRL+SUPER+W ALT+CTRL+SUPER+D ALT+CTRL+SUPER+T ALT+CTRL+SUPER+E ALT+SUPER+LEFT SUPER+T; do
+  grep -q "=$used\$" "$t/binds" && bad "a HyperVi bind lands on Omarchy's $used"
+done
+ok "no HyperVi bind on the Omarchy combos checked"
 grep -qE '^local alt_tab = false' "$inc" 2>/dev/null && ok "hypervi.lua: Alt+Tab off by default (Omarchy binds ALT + Tab)" || bad "hypervi.lua: Alt+Tab must default to off"
 # Alt+Tab: off by default; --alt-tab, or `alt-tab on|off` later, hands ALT + TAB to the HyperVi switcher
 grep -qE '^local alt_tab = false' "$inc" 2>/dev/null && ok "default: alt_tab = false" || bad "default must be alt_tab = false"
@@ -175,6 +186,14 @@ run alt 0.57.2 0.57.2 alt-tab on; rc=$?
 [ "$rc" = 0 ] && grep -qE '^local alt_tab = true' "$ia" && HV_F="$ia" lua -e 'assert(loadfile(os.getenv("HV_F")))' 2>/dev/null && ok "alt-tab on (still valid Lua)" || bad "alt-tab on (exit $rc)"
 run alt 0.57.2 0.57.2 alt-tab off; run alt 0.57.2 0.57.2 setup --alt-tab; rc=$?
 [ "$rc" = 0 ] && grep -qE '^local alt_tab = true' "$ia" && ok "setup --alt-tab on an existing hypervi.lua turns it on" || bad "setup --alt-tab kept alt_tab off in an existing hypervi.lua"
+# refresh: rewrites an unedited hypervi.lua with the current generator, keeping alt_tab; refuses an edited one
+printf -- '-- old generator\nlocal alt_tab = true\n' >"$ia"; sha256sum "$ia" | cut -d' ' -f1 >"$t/home-alt/.local/share/hypervi/hypervi.lua.sha256"
+run alt 0.57.2 0.57.2 refresh; rc=$?
+[ "$rc" = 0 ] && grep -qF 'local M = "SUPER + CTRL + ALT"' "$ia" && grep -qE '^local alt_tab = true' "$ia" && ok "refresh: rewrites an unedited hypervi.lua, keeps alt_tab" \
+  || bad "refresh (exit $rc): $(cat "$t/out-alt")"
+echo '-- my edit' >>"$ia"; cp "$ia" "$t/edited"
+run alt 0.57.2 0.57.2 refresh; rc=$?
+[ "$rc" != 0 ] && cmp -s "$ia" "$t/edited" && ok "refresh: refuses an edited hypervi.lua and leaves it alone" || bad "refresh on an edited file (exit $rc)"
 run alt 0.57.2 0.57.2 alt-tab maybe; rc=$?
 [ "$rc" != 0 ] && ok "alt-tab rejects anything but on/off" || bad "alt-tab maybe must fail"
 

@@ -1,0 +1,77 @@
+ok - manifest.json exists and is JSON
+ok - manifest: schemaVersion 1
+ok - manifest: id 'hypervi' is valid
+ok - manifest: bar-widget kind with its entry point
+ok - manifest: entry point omarchy/HyperViWidget.qml exists
+ok - manifest: barWidget.defaultSection is valid
+ok - no symlink tracked
+ok - omarchy-plugin-validate accepts the repository
+ok - omarchy/hypervi is executable
+ok - status --json: 0.55.0 is not compatible
+ok - setup refuses Hyprland 0.55.0 and writes nothing
+ok - setup on 0.56.2 succeeds
+ok - setup on 0.56.2: plugin really built
+ok - status: an empty kwinish-bars.so is not built
+ok - rebuild replaces an empty plugin
+ok - setup on 0.56.2 builds plugin-0.56/
+ok - status on 0.56.2: compatible, plugin line 0.56
+ok - plugin-0.56/ has the sources
+ok - plugin-0.56/ registers the same hl.plugin.kwinish functions
+ok - setup refuses headers that differ from the running Hyprland
+ok - setup on 0.57.2 succeeds
+ok - setup: plugin built into ~/.local/share/hypervi (an ELF, not an empty file)
+ok - setup: ABI receipt written
+ok - setup: kwinish-ui installed on ~/.local/bin
+ok - setup: kwinish-ui is a copy, not a link
+ok - setup: cargo build --locked
+ok - setup: hypervi.lua written and compiles
+ok - hypervi.lua: core from the plugin checkout
+ok - hypervi.lua: loads the built plugin
+FALHOU - hypervi.lua: binds on the same keys: ALT+CTRL+SHIFT+SUPER+DOWN
+ALT+CTRL+SHIFT+SUPER+LEFT
+ALT+CTRL+SHIFT+SUPER+RIGHT
+ALT+CTRL+SHIFT+SUPER+UP
+FALHOU - bind tile:left=ALT+CTRL+SUPER+LEFT missing (got: tile:left=ALT+CTRL+SHIFT+SUPER+LEFT)
+FALHOU - bind tile:right=ALT+CTRL+SUPER+RIGHT missing (got: tile:right=ALT+CTRL+SHIFT+SUPER+RIGHT)
+FALHOU - bind tile:top=ALT+CTRL+SUPER+UP missing (got: tile:top=ALT+CTRL+SHIFT+SUPER+UP)
+FALHOU - bind tile:bottom=ALT+CTRL+SUPER+DOWN missing (got: tile:bottom=ALT+CTRL+SHIFT+SUPER+DOWN)
+FALHOU - bind tile:topleft=ALT+CTRL+SUPER+U missing (got: tile:topleft=ALT+CTRL+SHIFT+SUPER+Q)
+FALHOU - bind tile:topright=ALT+CTRL+SUPER+I missing (got: tile:topright=ALT+CTRL+SHIFT+SUPER+W)
+FALHOU - bind tile:bottomleft=ALT+CTRL+SUPER+J missing (got: tile:bottomleft=ALT+CTRL+SHIFT+SUPER+A)
+FALHOU - bind tile:bottomright=ALT+CTRL+SUPER+K missing (got: tile:bottomright=ALT+CTRL+SHIFT+SUPER+S)
+FALHOU - bind tile:max=ALT+CTRL+SUPER+RETURN missing (got: tile:max=ALT+CTRL+SHIFT+SUPER+RETURN)
+ok - bind pack:left=ALT+CTRL+SHIFT+SUPER+LEFT
+FALHOU - bind show_desktop:=ALT+CTRL+SUPER+M missing (got: show_desktop:=CTRL+SHIFT+SUPER+D)
+FALHOU - bind layouts:=ALT+CTRL+SUPER+L missing (got: layouts:=CTRL+SHIFT+SUPER+T)
+FALHOU - a HyperVi bind lands on Omarchy's CTRL+SHIFT+SUPER+D
+FALHOU - a HyperVi bind lands on Omarchy's CTRL+SHIFT+SUPER+T
+ok - no HyperVi bind on the Omarchy combos checked
+ok - hypervi.lua: Alt+Tab off by default (Omarchy binds ALT + Tab)
+ok - default: alt_tab = false
+ok - setup --alt-tab: alt_tab = true
+ok - hypervi.lua: unbinds Omarchy's ALT + TAB pair when alt_tab is on
+ok - alt-tab off
+ok - alt-tab: written by temporary + rename
+ok - alt-tab on (still valid Lua)
+ok - setup --alt-tab on an existing hypervi.lua turns it on
+ok - alt-tab rejects anything but on/off
+ok - setup: no temporary file left
+ok - setup: one require line in hyprland.lua
+ok - setup: backup of hyprland.lua
+ok - setup twice: still one require line, backup kept
+ok - status --json after setup
+ok - status: ABI mismatch after a Hyprland update
+ok - remove: hyprland.lua back as it was, files gone
+ok - remove: keeps a kwinish-ui it did not install
+ok - setup refuses without ~/.config/hypr/hyprland.lua
+ok - bar widget reads hypervi status --json
+ok - bar widget file does not shadow a qs.Ui type
+ok - bar widget does not redefine Item.state
+ok - plugin: onNewWindow skips a window that already has a KwinishBar
+ok - plugin: onNewWindow does not give way to a Hyprbar
+ok - plugin-0.56: onNewWindow skips a window that already has a KwinishBar
+ok - plugin-0.56: onNewWindow does not give way to a Hyprbar
+ok - hypervi.lua: turns Omarchy's titlebars off when they are loaded
+ok - packaging/PKGBUILD: depends on hyprland>=0.57
+ok - packaging/plugin/PKGBUILD: depends on hyprland>=0.57
+test-omarchy-plugin: 14 falha(s)

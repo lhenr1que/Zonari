@@ -4,6 +4,7 @@
 #   hypervi status [--json]   what is installed, and whether the running Hyprland can use it
 #   hypervi setup [--alt-tab] build kwinish-ui and the title-bar plugin, write ~/.config/hypr/hypervi.lua, add one require line
 #   hypervi alt-tab on|off    give ALT + TAB to the HyperVi switcher (on) or leave it to Omarchy (off); then hyprctl reload
+#   hypervi refresh           rewrite hypervi.lua with this version's template (only if you never edited it; keeps alt_tab)
 #   hypervi rebuild           rebuild only the plugin (after a Hyprland update: the plugin is built for one exact Hyprland)
 #   hypervi remove            undo setup: the require line, hypervi.lua (kept as a backup if you edited it), the built files
 # Never uses sudo. Writes user files by temporary + rename. Needs Hyprland >= 0.56.2 with its headers at the same version:
@@ -97,8 +98,23 @@ if alt_tab then
   hl.unbind("ALT + SHIFT + TAB")
   sw.setup()
 end
--- SUPER + CTRL + SHIFT is free in Omarchy's default binds (SUPER and SUPER + ALT are taken). Table: $root/core/binds.lua
-require("binds").install(kw, { mod = "SUPER + CTRL + SHIFT", switcher = alt_tab and sw or nil, menu = "ALT + F3" })
+-- HyperVi's layer on Omarchy is SUPER + CTRL + ALT (free there for these keys in Omarchy 4.5's binds). Left: the key in
+-- HyperVi's own table ($root/core/binds.lua, mod SUPER); right: the key used here. Edit the right side, false drops a bind.
+local M = "SUPER + CTRL + ALT"
+require("binds").install(kw, { mod = "SUPER", switcher = alt_tab and sw or nil, menu = "ALT + F3", override = {
+  ["SUPER + ALT + Left"] = M .. " + Left", ["SUPER + ALT + Right"] = M .. " + Right", -- halves
+  ["SUPER + ALT + Up"] = M .. " + Up", ["SUPER + ALT + Down"] = M .. " + Down",
+  ["SUPER + ALT + Q"] = M .. " + U", ["SUPER + ALT + W"] = M .. " + I", -- corners (W is Omarchy's weather)
+  ["SUPER + ALT + A"] = M .. " + J", ["SUPER + ALT + S"] = M .. " + K",
+  ["SUPER + ALT + Return"] = M .. " + Return", -- maximize
+  ["SUPER + ALT + H"] = M .. " + H", ["SUPER + ALT + V"] = M .. " + V", -- maximize one axis
+  ["SUPER + CTRL + ALT + Left"] = M .. " + SHIFT + Left", ["SUPER + CTRL + ALT + Right"] = M .. " + SHIFT + Right", -- pack
+  ["SUPER + CTRL + ALT + Up"] = M .. " + SHIFT + Up", ["SUPER + CTRL + ALT + Down"] = M .. " + SHIFT + Down",
+  ["SUPER + D"] = M .. " + M", -- show desktop
+  ["SUPER + ALT + T"] = M .. " + P", -- keep above
+  ["SUPER + T"] = M .. " + L", -- layout picker
+  ["SUPER + CTRL + E"] = "SUPER + CTRL + SHIFT + L", -- zone editor
+} })
 hl.on("hyprland.start", function() hl.exec_cmd("$bin/kwinish-ui") end)
 EOF
   replace "$inc" "$body"; rm -f "$body"
@@ -133,7 +149,7 @@ cmd_setup() {
     write_include "$alt"
   fi
   add_require
-  say "done. Reload Hyprland (hyprctl reload) or log out and in. Binds: SUPER + CTRL + SHIFT + arrows, Q/W/A/S, T, D (see core/binds.lua)"
+  say "done. Reload Hyprland (hyprctl reload) or log out and in. Binds: SUPER + CTRL + ALT + arrows (halves), U/I/J/K (corners), Return, L (layouts); full list in $inc"
 }
 
 cmd_alt_tab() {
@@ -146,6 +162,16 @@ cmd_alt_tab() {
   replace "$inc" "$body"; rm -f "$body"
   if grep -q 'hl.unbind("ALT + TAB")' "$inc"; then say "ALT + TAB: $([ $v = true ] && echo HyperVi || echo Omarchy). Apply with: hyprctl reload"
   else say "alt_tab set, but $inc predates the option: run hypervi remove and hypervi setup to regenerate it"; fi
+}
+
+cmd_refresh() {
+  [ -f "$inc" ] || die "no $inc: run hypervi setup first"
+  [ -f "$share/hypervi.lua.sha256" ] && [ "$(sha256sum "$inc" | cut -d' ' -f1)" = "$(cat "$share/hypervi.lua.sha256")" ] \
+    || die "$inc was edited after setup: not rewriting it (merge by hand, or: hypervi remove, then hypervi setup)"
+  local alt=false
+  grep -qE '^local alt_tab = true' "$inc" && alt=true
+  write_include "$alt"
+  say "rewrote $inc (alt_tab = $alt). Apply with: hyprctl reload"
 }
 
 cmd_rebuild() {
@@ -198,6 +224,7 @@ case "${1:-}" in
   setup) shift; cmd_setup "$@" ;;
   alt-tab) shift; cmd_alt_tab "$@" ;;
   rebuild) cmd_rebuild ;;
+  refresh) cmd_refresh ;;
   remove) cmd_remove ;;
-  *) sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; [ -z "${1:-}" ] || exit 2 ;;
+  *) sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; [ -z "${1:-}" ] || exit 2 ;;
 esac
