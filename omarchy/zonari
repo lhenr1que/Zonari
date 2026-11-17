@@ -1,0 +1,271 @@
+#!/usr/bin/env bash
+# Zonari on Omarchy (OpenSpec add-omarchy-plugin). `omarchy plugin add` clones this repository to
+# ~/.config/omarchy/plugins/zonari; this script turns that checkout into a working Zonari:
+#   zonari status [--json]   what is installed, and whether the running Hyprland can use it
+#   zonari setup [--alt-tab] build zonari-ui and the title-bar plugin, write ~/.config/hypr/zonari.lua, add one require line
+#   zonari alt-tab on|off    give ALT + TAB to the Zonari switcher (on) or leave it to Omarchy (off); then hyprctl reload
+#   zonari refresh           rewrite zonari.lua with this version's template (only if you never edited it; keeps alt_tab)
+#   zonari rebuild           rebuild only the plugin (after a Hyprland update: the plugin is built for one exact Hyprland)
+#   zonari remove            undo setup: the require line, zonari.lua (kept as a backup if you edited it), the built files
+# Never uses sudo. Writes user files by temporary + rename. Needs Hyprland >= 0.56.2 with its headers at the same version:
+# 0.56.x builds the frozen zonari-bars-0.56/ tree, 0.57+ builds zonari-bars/; the Lua core and zonari-ui are the same.
+set -euo pipefail
+
+root=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd -P)
+cfg=${XDG_CONFIG_HOME:-$HOME/.config}/hypr
+share=${XDG_DATA_HOME:-$HOME/.local/share}/zonari
+bin=$HOME/.local/bin
+main=$cfg/hyprland.lua
+inc=$cfg/zonari.lua
+req='require("hypr.zonari")'
+min=0.56.2
+
+die() { echo "zonari: $*" >&2; exit 1; }
+say() { echo "zonari: $*"; }
+
+running() { [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && hyprctl version -j 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true; }
+headers() { pkg-config --modversion hyprland 2>/dev/null || true; }
+ge() { [ -n "$1" ] && [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
+# plugin_dir: the plugin tree for the installed headers (0.56.x: zonari-bars-0.56, else plugin)
+plugin_line() { case $(headers) in 0.56.*) echo 0.56 ;; *) echo 0.57 ;; esac; }
+plugin_dir() { [ "$(plugin_line)" = 0.56 ] && echo "$root/zonari-bars-0.56" || echo "$root/zonari-bars"; }
+abi_now() { sh "$(plugin_dir)/abi.sh" 2>/dev/null || true; }
+is_elf() { [ -s "$1" ] && [ "$(head -c4 "$1")" = $'\177ELF' ]; }
+configured() { [ -f "$inc" ] && [ -f "$main" ] && grep -qxF "$req" "$main"; }
+plugin_loaded() { [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && hyprctl plugin list 2>/dev/null | grep -q 'zonari' ; }
+
+# replace <file> <content-file>: temporary in the same directory, then rename (keeps the mode of an existing file)
+replace() {
+  local tmp
+  tmp=$(mktemp "$(dirname "$1")/.$(basename "$1").XXXXXX")
+  cat "$2" >"$tmp"
+  [ -e "$1" ] && chmod --reference="$1" "$tmp"
+  mv -f "$tmp" "$1"
+}
+
+check_compatible() {
+  local run hdr
+  run=$(running); hdr=$(headers)
+  [ -n "$run" ] || die "Hyprland is not running here (hyprctl version failed); run setup from inside your Hyprland session"
+  ge "$run" "$min" || die "Zonari needs Hyprland $min or newer; this session runs $run. Update Hyprland (omarchy update) and run setup again."
+  [ "$hdr" = "$run" ] || die "the Hyprland headers ($hdr) differ from the running Hyprland ($run); update the hyprland package and log out and in"
+}
+
+lua_safe() { case $1 in *\"* | *\\* | *$'\n'*) die "path not supported (quote, backslash or newline): $1" ;; esac; }
+
+build_ui() {
+  say "building zonari-ui (cargo, a few minutes the first time)"
+  CARGO_TARGET_DIR="$share/target" cargo build --release --locked --manifest-path "$root/zonari-ui/Cargo.toml"
+  mkdir -p "$share/bin" "$bin"
+  install -m755 "$share/target/release/zonari-ui" "$share/bin/zonari-ui"
+  local tmp; tmp=$(mktemp "$bin/.zonari-ui.XXXXXX")
+  install -m755 "$share/bin/zonari-ui" "$tmp"; mv -f "$tmp" "$bin/zonari-ui"
+}
+
+build_plugin() {
+  local dir; dir=$(plugin_dir)
+  say "building the title-bar plugin for Hyprland $(headers) from ${dir#"$root"/}"
+  mkdir -p "$share"
+  # a name that does not exist yet, and -B: an existing (even empty) target would look up to date and make would skip the build
+  local tmp; tmp=$(mktemp -u "$share/.zonari-bars.so.XXXXXX")
+  make -B -C "$dir" TARGET="$tmp" >&2 || { rm -f "$tmp"; die "plugin build failed"; }
+  is_elf "$tmp" || { rm -f "$tmp"; die "plugin build produced no ELF file ($tmp)"; }
+  mv -f "$tmp" "$share/zonari-bars.so" # a new file: never rewrites a .so the compositor has mapped
+  abi_now >"$share/.abi.tmp"; mv -f "$share/.abi.tmp" "$share/zonari-bars.abi"
+}
+
+write_include() {
+  lua_safe "$root"; lua_safe "$share"; lua_safe "$bin"
+  local alt=${1:-false} body; body=$(mktemp)
+  cat >"$body" <<EOF
+-- Zonari for Omarchy, written by \`zonari setup\`. Edit freely: setup never overwrites this file.
+-- Undo everything with: $root/omarchy/zonari remove
+local alt_tab = $alt -- used only when settings.json has no "alt_tab" (the settings window and zonari alt-tab on|off set it)
+local load_plugin = true -- the title bars; after a Hyprland update run: $root/omarchy/zonari rebuild
+
+package.path = "$root/zonari-core/?.lua;" .. package.path
+do -- the switch the settings window shows: ~/.config/zonari/settings.json "alt_tab", read as data (settings.lua, no load)
+  local kwjson, s = require("kwjson"), nil
+  local dir = (os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")) .. "/zonari"
+  s = require("settings").parse(kwjson.read(dir .. "/settings.json"))
+  if s.alt_tab ~= nil then alt_tab = s.alt_tab end
+end
+if load_plugin and hl.plugin and hl.plugin.load then
+  hl.plugin.load("$share/zonari-bars.so")
+  -- Omarchy's floating-workspace titlebars (a hyprbars fork) would draw a second bar; this file loads after Omarchy's
+  if hl.plugin and hl.plugin.hyprbars then hl.config({ plugin = { hyprbars = { enabled = false } } }) end
+end
+
+-- Omarchy's dock (shown on floating workspaces) reserves no space: keep its band free so snaps, zones and Snap Assist
+-- stay above it. shortcut: 51 px is the default theme's dock (gap 3 + icon 36 + 2 x 6); set dock_px if yours differs.
+local dock_px = 51
+local reserve = {}
+do
+  local kwjson = require("kwjson")
+  local cfg = kwjson.decode(kwjson.read((os.getenv("HOME") or "") .. "/.config/omarchy/shell.json") or "{}")
+  local dock = type(cfg) == "table" and type(cfg.dock) == "table" and cfg.dock or {}
+  local side = ({ left = "left", right = "right", top = "top" })[dock.position] or "bottom"
+  if dock.autohide ~= true then reserve[side] = dock_px end
+end
+
+local kw = require("zonari")
+kw.setup({ placement = "smart", autoraise_ms = 400, reserve = reserve }) -- drop placement or autoraise_ms to turn it off
+local sw = require("switcher")
+if alt_tab then
+  hl.unbind("ALT + TAB") -- Omarchy's pair (default/hypr/bindings/tiling.lua); this file loads after it
+  hl.unbind("ALT + SHIFT + TAB")
+  sw.setup()
+end
+-- Zonari's layer on Omarchy is SUPER + CTRL + ALT (free there for these keys in Omarchy 4.5's binds). Left: the key in
+-- Zonari's own table ($root/zonari-core/binds.lua, mod SUPER); right: the key used here. Edit the right side, false drops a bind.
+local M = "SUPER + CTRL + ALT"
+require("binds").install(kw, { mod = "SUPER", switcher = alt_tab and sw or nil, menu = "ALT + F3", override = {
+  ["SUPER + ALT + Left"] = M .. " + Left", ["SUPER + ALT + Right"] = M .. " + Right", -- halves
+  ["SUPER + ALT + Up"] = M .. " + Up", ["SUPER + ALT + Down"] = M .. " + Down",
+  ["SUPER + ALT + Q"] = M .. " + U", ["SUPER + ALT + W"] = M .. " + I", -- corners (W is Omarchy's weather)
+  ["SUPER + ALT + A"] = M .. " + J", ["SUPER + ALT + S"] = M .. " + K",
+  ["SUPER + ALT + Return"] = M .. " + Return", -- maximize
+  ["SUPER + ALT + H"] = M .. " + H", ["SUPER + ALT + V"] = M .. " + V", -- maximize one axis
+  ["SUPER + CTRL + ALT + Left"] = M .. " + SHIFT + Left", ["SUPER + CTRL + ALT + Right"] = M .. " + SHIFT + Right", -- pack
+  ["SUPER + CTRL + ALT + Up"] = M .. " + SHIFT + Up", ["SUPER + CTRL + ALT + Down"] = M .. " + SHIFT + Down",
+  ["SUPER + D"] = M .. " + M", -- show desktop
+  ["SUPER + ALT + T"] = M .. " + P", -- keep above
+  ["SUPER + T"] = M .. " + L", -- layout picker
+  ["SUPER + CTRL + E"] = "SUPER + CTRL + SHIFT + L", -- zone editor
+} })
+hl.on("hyprland.start", function() hl.exec_cmd("$bin/zonari-ui") end)
+EOF
+  replace "$inc" "$body"; rm -f "$body"
+  sha256sum "$inc" | cut -d' ' -f1 >"$share/zonari.lua.sha256"
+}
+
+add_require() {
+  grep -qxF "$req" "$main" && return 0
+  [ -e "$main.zonari-bak" ] || cp -p "$main" "$main.zonari-bak"
+  local body; body=$(mktemp)
+  cat "$main" >"$body"
+  [ -z "$(tail -c1 "$main")" ] || echo >>"$body"
+  echo "$req" >>"$body"
+  replace "$main" "$body"; rm -f "$body"
+}
+
+# Copy the newest pre-Zonari configuration once, preserving the source.
+migrate_config() {
+  local base=${XDG_CONFIG_HOME:-$HOME/.config} old
+  [ ! -e "$base/zonari" ] || return 0
+  for old in omniwm kwinish; do
+    if [ -d "$base/$old" ]; then
+      local stage; stage=$(mktemp -d "$base/.zonari.migrating.XXXXXX")
+      cp -a "$base/$old/." "$stage/"
+      mv "$stage" "$base/zonari"
+      say "copied your settings from $base/$old to $base/zonari (the old folder is untouched)"
+      break
+    fi
+  done
+}
+
+cmd_setup() {
+  local alt=false
+  case "${1:-}" in --alt-tab) alt=true ;; "") ;; *) die "unknown setup option: $1" ;; esac
+  [ -f "$main" ] || die "no $main: Zonari on Omarchy needs Hyprland's Lua config"
+  command -v jq >/dev/null || die "jq is missing"
+  check_compatible
+  migrate_config
+  for c in cargo make pkg-config; do command -v "$c" >/dev/null || die "$c is missing (sudo pacman -S --needed rust make pkgconf)"; done
+  build_ui
+  build_plugin
+  if [ -f "$inc" ]; then
+    say "keeping your $inc"
+    [ "$alt" = true ] && set_setting alt_tab true
+  else
+    if [ "$alt" = false ] && [ -t 0 ] && [ -t 1 ] && command -v gum >/dev/null \
+      && gum confirm --default=false "Replace Omarchy's ALT + TAB with the Zonari switcher (KWin-style, with previews)?"; then alt=true; fi
+    set_setting alt_tab "$alt"
+    set_setting workspace_modes false # Omarchy's workspace indicator switches modes; the Zonari menu leaves them out
+    write_include "$alt"
+  fi
+  add_require
+  say "done. Reload Hyprland (hyprctl reload) or log out and in. Binds: SUPER + CTRL + ALT + arrows (halves), U/I/J/K (corners), Return, L (layouts); full list in $inc"
+}
+
+# set_setting <key> true|false: one key of ~/.config/zonari/settings.json (the settings window's switches), other keys kept
+set_setting() {
+  local f=${XDG_CONFIG_HOME:-$HOME/.config}/zonari/settings.json body
+  mkdir -p "$(dirname "$f")"
+  if [ -e "$f" ]; then jq -e 'type == "object"' "$f" >/dev/null 2>&1 || die "$f is not a JSON object: not overwriting it (fix or remove it)"; fi
+  body=$(mktemp)
+  { [ -e "$f" ] && cat "$f" || echo '{}'; } | jq --arg k "$1" --argjson v "$2" '.[$k] = $v' >"$body"
+  replace "$f" "$body"; rm -f "$body"
+}
+
+cmd_alt_tab() {
+  local v
+  case "${1:-}" in on) v=true ;; off) v=false ;; *) die "usage: zonari alt-tab on|off" ;; esac
+  set_setting alt_tab "$v"
+  say "ALT + TAB: $([ $v = true ] && echo Zonari || echo Omarchy). Apply with: hyprctl reload (or use the switch in zonari-ui settings)"
+}
+
+cmd_refresh() {
+  [ -f "$inc" ] || die "no $inc: run zonari setup first"
+  [ -f "$share/zonari.lua.sha256" ] && [ "$(sha256sum "$inc" | cut -d' ' -f1)" = "$(cat "$share/zonari.lua.sha256")" ] \
+    || die "$inc was edited after setup: not rewriting it (merge by hand, or: zonari remove, then zonari setup)"
+  local alt=false
+  grep -qE '^local alt_tab = true' "$inc" && alt=true
+  write_include "$alt"
+  say "rewrote $inc (alt_tab = $alt). Apply with: hyprctl reload"
+}
+
+cmd_rebuild() {
+  check_compatible; build_plugin
+  # Hyprland reloads config plugins only when their list changes: the same path needs an explicit unload + load
+  say "rebuilt. Load it now with: hyprctl plugin unload $share/zonari-bars.so; hyprctl plugin load $share/zonari-bars.so (or log out and in)"
+}
+
+cmd_remove() {
+  if [ -f "$main" ] && grep -qxF "$req" "$main"; then
+    local body; body=$(mktemp)
+    grep -vxF "$req" "$main" >"$body" || true
+    replace "$main" "$body"; rm -f "$body"
+    [ -f "$main.zonari-bak" ] && cmp -s "$main" "$main.zonari-bak" && rm -f "$main.zonari-bak"
+    say "removed the require line from $main"
+  fi
+  if [ -f "$inc" ]; then
+    if [ -f "$share/zonari.lua.sha256" ] && [ "$(sha256sum "$inc" | cut -d' ' -f1)" = "$(cat "$share/zonari.lua.sha256")" ]; then
+      rm -f "$inc"
+    else
+      mv -f "$inc" "$inc.removed-$(date +%Y%m%d%H%M%S)"; say "you had edited $inc: kept it as $inc.removed-*"
+    fi
+  fi
+  if [ -f "$bin/zonari-ui" ] && [ -f "$share/bin/zonari-ui" ] && cmp -s "$bin/zonari-ui" "$share/bin/zonari-ui"; then rm -f "$bin/zonari-ui"; fi
+  if plugin_loaded; then hyprctl plugin unload "$share/zonari-bars.so" >/dev/null 2>&1 || true; fi
+  [ -d "$share" ] && rm -rf -- "$share"
+  say "removed. Reload Hyprland (hyprctl reload). The plugin itself goes with: omarchy plugin remove zonari"
+}
+
+cmd_status() {
+  local run hdr compat=false abi_ok=false receipt=""
+  run=$(running); hdr=$(headers)
+  ge "$run" "$min" && [ "$hdr" = "$run" ] && compat=true
+  [ -f "$share/zonari-bars.abi" ] && receipt=$(cat "$share/zonari-bars.abi")
+  [ -n "$receipt" ] && [ "$receipt" = "$(abi_now)" ] && abi_ok=true
+  local json
+  json=$(jq -n --arg run "$run" --arg hdr "$hdr" --argjson compat $compat --argjson abi $abi_ok \
+    --argjson conf "$(configured && echo true || echo false)" \
+    --argjson built "$(is_elf "$share/zonari-bars.so" && echo true || echo false)" \
+    --argjson loaded "$(plugin_loaded && echo true || echo false)" \
+    --argjson ui "$([ -x "$bin/zonari-ui" ] && echo true || echo false)" \
+    --arg root "$root" --arg min "$min" --arg line "$(plugin_line)" \
+    '{plugin_line: $line, hyprland: $run, headers: $hdr, required: $min, compatible: $compat, configured: $conf, plugin_built: $built,
+      abi_ok: $abi, plugin_loaded: $loaded, ui_installed: $ui, root: $root}')
+  if [ "${1:-}" = --json ]; then echo "$json"; else jq -r 'to_entries[] | "\(.key): \(.value)"' <<<"$json"; fi
+}
+
+case "${1:-}" in
+  status) shift; cmd_status "$@" ;;
+  setup) shift; cmd_setup "$@" ;;
+  alt-tab) shift; cmd_alt_tab "$@" ;;
+  rebuild) cmd_rebuild ;;
+  refresh) cmd_refresh ;;
+  remove) cmd_remove ;;
+  *) sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; [ -z "${1:-}" ] || exit 2 ;;
+esac

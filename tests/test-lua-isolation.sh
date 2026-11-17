@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Every omniwm-core/test_*.lua must keep its files in its own temp dir, even when run by hand from a desktop session:
+# Every zonari-core/test_*.lua must keep its files in its own temp dir, even when run by hand from a desktop session:
 # run each suite with HOME and XDG pointing at empty sentinel dirs and fail if a suite leaves anything there.
 set -u
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P) || exit 1
 lua=${LUA:-lua}
 command -v "$lua" >/dev/null || { echo "FALHOU: falta o comando $lua" >&2; exit 1; }
-s=$(mktemp -d "${TMPDIR:-/tmp}/omniwm-isolation.XXXXXXXX") || exit 1
+s=$(mktemp -d "${TMPDIR:-/tmp}/zonari-isolation.XXXXXXXX") || exit 1
 trap 'rm -rf -- "$s"' EXIT
 
 fails=0 n=0
-for t in "$root"/omniwm-core/test_*.lua; do
+for t in "$root"/zonari-core/test_*.lua; do
   [ -e "$t" ] || break
   n=$((n + 1))
   rm -rf -- "$s/env" && mkdir -p "$s/env"/{home,config,data,state,cache,runtime} || exit 1
@@ -21,6 +21,6 @@ for t in "$root"/omniwm-core/test_*.lua; do
     fails=$((fails + 1))
   fi
 done
-[ "$n" -gt 0 ] || { echo "FALHOU: nenhuma suíte omniwm-core/test_*.lua"; exit 1; }
+[ "$n" -gt 0 ] || { echo "FALHOU: nenhuma suíte zonari-core/test_*.lua"; exit 1; }
 [ "$fails" -eq 0 ] || exit 1
 echo "isolamento ok: $n suítes não gravaram no HOME/XDG herdado"

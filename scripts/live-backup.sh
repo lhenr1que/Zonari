@@ -5,7 +5,7 @@
 #   bash scripts/live-backup.sh restore <state dir>                   deletes <state dir> once everything is back
 set -euo pipefail
 die() { echo "live-backup: $*" >&2; exit 1; }
-mark=omniwm-live-backup
+mark=zonari-live-backup
 
 save() {
   [ $# -ge 2 ] || die "uso: save <diretório de estado> <caminho absoluto>..."

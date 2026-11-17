@@ -3,7 +3,7 @@
 # so "missing tool" is really missing. Every failure must give a non-zero exit, and the run must stay in its temp dir.
 set -u
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P) || exit 1
-t=$(mktemp -d "${TMPDIR:-/tmp}/omniwm-test-check.XXXXXXXX") || exit 1
+t=$(mktemp -d "${TMPDIR:-/tmp}/zonari-test-check.XXXXXXXX") || exit 1
 trap 'rm -rf -- "$t"' EXIT
 repo=$t/repo log=$t/log out=$t/out
 fails=0
@@ -32,11 +32,11 @@ bin() {
 
 # repo <first word of each suite>...: a fresh fake checkout with one passing tools test.
 mkrepo() {
-  rm -rf "$repo" && mkdir -p "$repo/omniwm-core" "$repo/tests" "$repo/scripts" "$repo/omniwm-ui" "$repo/omniwm-bars"
+  rm -rf "$repo" && mkdir -p "$repo/zonari-core" "$repo/tests" "$repo/scripts" "$repo/zonari-ui" "$repo/zonari-bars"
   cp "$here/../scripts/check.sh" "$repo/scripts/check.sh"
   printf '%s\n' "exit \${TOOLS_RC:-0}" > "$repo/tests/test-dummy.sh"
   local i=0 w
-  for w; do i=$((i + 1)); echo "$w" > "$repo/omniwm-core/test_$i.lua"; done
+  for w; do i=$((i + 1)); echo "$w" > "$repo/zonari-core/test_$i.lua"; done
 }
 
 # expect <exit code> <description> [args]: run check.sh from an unrelated cwd with a session-like environment.
@@ -55,15 +55,15 @@ check_log() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
 bin; mkrepo ok ok
 expect 0 "tudo passa"
 check_log "roda as duas suítes, tools, cargo test --locked e make" \
-  'has "lua omniwm-core/test_1.lua" && has "lua omniwm-core/test_2.lua" && has "cargo test --locked --manifest-path omniwm-ui/Cargo.toml" && has "make -C omniwm-bars TARGET="'
-check_log "plugin compilado no diretório temporário, nada em omniwm-bars/" \
-  'grep -q "make -C omniwm-bars TARGET=$t/tmp/omniwm-check\.[^/]*/omniwm-bars\.so$" "$log" && [ -z "$(ls -A "$repo/omniwm-bars")" ]'
+  'has "lua zonari-core/test_1.lua" && has "lua zonari-core/test_2.lua" && has "cargo test --locked --manifest-path zonari-ui/Cargo.toml" && has "make -C zonari-bars TARGET="'
+check_log "plugin compilado no diretório temporário, nada em zonari-bars/" \
+  'grep -q "make -C zonari-bars TARGET=$t/tmp/zonari-check\.[^/]*/zonari-bars\.so$" "$log" && [ -z "$(ls -A "$repo/zonari-bars")" ]'
 check_log "temporário apagado ao sair" '[ -z "$(ls -A "$t/tmp")" ]'
 
 mkrepo fail ok
 expect 1 "uma suíte Lua falha"
-check_log "as suítes seguintes ainda rodam" 'has "lua omniwm-core/test_2.lua"'
-check_log "a falha aparece no resumo" 'grep -q "omniwm-core/test_1.lua" "$out"'
+check_log "as suítes seguintes ainda rodam" 'has "lua zonari-core/test_2.lua"'
+check_log "a falha aparece no resumo" 'grep -q "zonari-core/test_1.lua" "$out"'
 
 mkrepo ok
 TOOLS_RC=3 expect 1 "um teste de tests/ falha"
@@ -79,8 +79,8 @@ done
 bin
 
 mkrepo
-expect 1 "nenhuma suíte omniwm-core/test_*.lua"
-rm "$repo/tests/test-dummy.sh"; echo ok > "$repo/omniwm-core/test_1.lua"
+expect 1 "nenhuma suíte zonari-core/test_*.lua"
+rm "$repo/tests/test-dummy.sh"; echo ok > "$repo/zonari-core/test_1.lua"
 expect 1 "nenhum teste tests/test-*.sh"
 
 mkrepo ok
@@ -94,7 +94,7 @@ expect 2 "argumento a mais" --lua-only extra
 mkrepo env
 expect 0 "suíte que inspeciona o ambiente" --lua-only
 check_log "HOME e XDG apontam para o temporário do check" \
-  'grep -q "^HOME=$t/tmp/omniwm-check\.[^/]*/home$" "$t/env" && grep -q "^CFG=$t/tmp/omniwm-check\.[^/]*/config$" "$t/env" && grep -q "^RUN=$t/tmp/omniwm-check\.[^/]*/runtime$" "$t/env"'
+  'grep -q "^HOME=$t/tmp/zonari-check\.[^/]*/home$" "$t/env" && grep -q "^CFG=$t/tmp/zonari-check\.[^/]*/config$" "$t/env" && grep -q "^RUN=$t/tmp/zonari-check\.[^/]*/runtime$" "$t/env"'
 check_log "sem sockets da sessão (Hyprland, Wayland)" 'grep -q "^SIG=unset$" "$t/env" && grep -q "^WL=unset$" "$t/env"'
 check_log "CARGO_HOME fica no HOME de fora" 'grep -q "^CARGO_HOME=$t/outer/.cargo$" "$t/env"'
 check_log "roda na raiz do repositório" 'grep -q "^PWD=$repo$" "$t/env"'

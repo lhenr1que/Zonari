@@ -32,7 +32,7 @@ O beta original é um rascunho histórico. Continuam pertinentes como critérios
 
 ## Licenças e atribuições
 
-Conserve [LICENSE](LICENSE), [NOTICE do plugin](omniwm-bars/NOTICE), [licença de origem hyprbars](omniwm-bars/LICENSE.hyprland-plugins) e cabeçalhos SPDX. O acervo mantém referências e triagens históricas. Antes de reutilizar componente externo, registre origem, commit, arquivos transitivos, licença, autoria e alterações. A pesquisa de shells não autoriza incorporação de código nem escolhe uma base.
+Conserve [LICENSE](LICENSE), [NOTICE do plugin](zonari-bars/NOTICE), [licença de origem hyprbars](zonari-bars/LICENSE.hyprland-plugins) e cabeçalhos SPDX. O acervo mantém referências e triagens históricas. Antes de reutilizar componente externo, registre origem, commit, arquivos transitivos, licença, autoria e alterações. A pesquisa de shells não autoriza incorporação de código nem escolhe uma base.
 
 ## Manutenção documental
 

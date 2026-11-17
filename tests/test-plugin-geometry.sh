@@ -3,13 +3,13 @@
 # CXX selects the compiler (default g++); run once per compiler.
 set -u
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P) || exit 1
-t=$(mktemp -d "${TMPDIR:-${XDG_CACHE_HOME:-$HOME/.cache}}/omniwm-test-geometry.XXXXXXXX") || exit 1
+t=$(mktemp -d "${TMPDIR:-${XDG_CACHE_HOME:-$HOME/.cache}}/zonari-test-geometry.XXXXXXXX") || exit 1
 trap 'rm -rf -- "$t"' EXIT
 cxx=${CXX:-g++}
 command -v "$cxx" >/dev/null || { echo "FALHOU - falta o compilador $cxx"; exit 1; }
 command -v perl >/dev/null || { echo "FALHOU - falta perl (mutacoes do header)"; exit 1; }
 flags=(-std=c++2b -Wall -Wextra -Werror)
-"$cxx" "${flags[@]}" -I "$root/omniwm-bars" "$root/omniwm-bars/test_geometry.cpp" -o "$t/test_geometry" || { echo "FALHOU - compilar omniwm-bars/test_geometry.cpp"; exit 1; }
+"$cxx" "${flags[@]}" -I "$root/zonari-bars" "$root/zonari-bars/test_geometry.cpp" -o "$t/test_geometry" || { echo "FALHOU - compilar zonari-bars/test_geometry.cpp"; exit 1; }
 "$t/test_geometry" || exit 1
 
 # Fault injection inside the TEST executable. Each variant runs the SAME
@@ -45,9 +45,9 @@ negative 13 'P5 all components divide by scale exactly once'
 mutant() { # name find replace expected|COMPILE
     local dir="$t/mut" out
     rm -rf "$dir"; mkdir "$dir"
-    cp "$root/omniwm-bars/test_geometry.cpp" "$dir/"
-    A=$2 B=$3 perl -0777 -pe 'BEGIN { $a = $ENV{A}; $b = $ENV{B} } s/\Q$a\E/$b/' "$root/omniwm-bars/geometry.hpp" >"$dir/geometry.hpp"
-    if cmp -s "$root/omniwm-bars/geometry.hpp" "$dir/geometry.hpp"; then
+    cp "$root/zonari-bars/test_geometry.cpp" "$dir/"
+    A=$2 B=$3 perl -0777 -pe 'BEGIN { $a = $ENV{A}; $b = $ENV{B} } s/\Q$a\E/$b/' "$root/zonari-bars/geometry.hpp" >"$dir/geometry.hpp"
+    if cmp -s "$root/zonari-bars/geometry.hpp" "$dir/geometry.hpp"; then
         printf 'FALHOU - mutacao "%s" nao alterou o header (padrao desatualizado)\n' "$1"; exit 1
     fi
     if [[ $4 == COMPILE ]]; then

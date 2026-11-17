@@ -1,4 +1,4 @@
-# Testes do OmniWM
+# Testes do Zonari
 
 Guia operacional. A consolidação documental de 29/10/2026 **não executou** as suítes abaixo, builds ou testes ao vivo. Resultados anteriores estão datados em [STATUS](STATUS.md); a existência de um teste não equivale à sua execução nesta revisão.
 
@@ -7,9 +7,9 @@ Guia operacional. A consolidação documental de 29/10/2026 **não executou** as
 bash scripts/check.sh
 ```
 Roda, nesta ordem, e continua depois de uma falha para mostrar todas:
-1. cada `omniwm-core/test_*.lua` com `lua` (Lua 5.5, a que o Hyprland instalado usa: `readelf -d /usr/bin/Hyprland` mostra `liblua.so.5.5`);
+1. cada `zonari-core/test_*.lua` com `lua` (Lua 5.5, a que o Hyprland instalado usa: `readelf -d /usr/bin/Hyprland` mostra `liblua.so.5.5`);
 2. cada `tests/test-*.sh` (os testes do próprio executor, do isolamento das suítes e do `live-backup.sh`);
-3. `cargo test --locked --manifest-path omniwm-ui/Cargo.toml`;
+3. `cargo test --locked --manifest-path zonari-ui/Cargo.toml`;
 4. `make -C plugin` com saída num diretório temporário.
 
 Código de saída: **0** tudo passou; **1** alguma falha, ferramenta ausente ou nenhum teste encontrado numa etapa; **2** uso errado. Ferramenta ausente é falha, nunca etapa pulada. Com os caches do cargo prontos, leva uns 20 s (13 s são do plugin).
@@ -17,11 +17,11 @@ Código de saída: **0** tudo passou; **1** alguma falha, ferramenta ausente ou 
 ## Validação parcial
 - `bash scripts/check.sh --lua-only`: só as suítes Lua; é o que o `check()` do `resources/packaging/PKGBUILD` roda.
 - `LUA=lua5.4 bash scripts/check.sh`: outro interpretador, para comparar.
-- Uma suíte só: `lua omniwm-core/test_switcher.lua`. Rodar direto é seguro: cada suíte guarda seus arquivos num temporário próprio, e `tests/test-lua-isolation.sh` falha se alguma gravar no HOME/XDG herdado.
+- Uma suíte só: `lua zonari-core/test_switcher.lua`. Rodar direto é seguro: cada suíte guarda seus arquivos num temporário próprio, e `tests/test-lua-isolation.sh` falha se alguma gravar no HOME/XDG herdado.
 - Os testes do executor: `bash tests/test-check.sh`.
 
 ## Isolamento
-O `check.sh` dá aos testes `HOME` e `XDG_*` temporários, apagados ao sair, e remove `HYPRLAND_INSTANCE_SIGNATURE`, `WAYLAND_DISPLAY`, `DISPLAY` e `DBUS_SESSION_BUS_ADDRESS`: pelo ambiente, nenhum teste acha o compositor, a config do dono ou o `switcher.json` da sessão. `CARGO_HOME` e `RUSTUP_HOME` continuam apontando para o HOME real (registro e toolchains já baixados). O plugin é compilado no temporário: nunca reescreve um `omniwm-bars/omniwm-bars.so` que o compositor possa ter carregado, e sempre compila de fato (o `Makefile` não acompanha os `.hpp`).
+O `check.sh` dá aos testes `HOME` e `XDG_*` temporários, apagados ao sair, e remove `HYPRLAND_INSTANCE_SIGNATURE`, `WAYLAND_DISPLAY`, `DISPLAY` e `DBUS_SESSION_BUS_ADDRESS`: pelo ambiente, nenhum teste acha o compositor, a config do dono ou o `switcher.json` da sessão. `CARGO_HOME` e `RUSTUP_HOME` continuam apontando para o HOME real (registro e toolchains já baixados). O plugin é compilado no temporário: nunca reescreve um `zonari-bars/zonari-bars.so` que o compositor possa ter carregado, e sempre compila de fato (o `Makefile` não acompanha os `.hpp`).
 Não é uma sandbox de segurança: um teste ainda pode ler caminhos absolutos e usar o `/tmp`.
 
 ## Pré-requisitos (Arch)
@@ -30,13 +30,13 @@ Não é uma sandbox de segurança: um teste ainda pode ler caminhos absolutos e 
 ## Testes ao vivo
 O `check.sh` não cobre o desktop real: carregar o plugin, mouse real e vários monitores são do dono ([STATUS](STATUS.md), "Testes pendentes para o dono"). Todo roteiro começa por `fish scripts/dev-reload.fish` (plugin e núcleo do repositório). Se o teste muda arquivo do dono, guarde antes e desfaça depois:
 ```fish
-bash scripts/live-backup.sh save ~/.local/state/omniwm-backup/<teste> <caminho absoluto>...
-bash scripts/live-backup.sh restore ~/.local/state/omniwm-backup/<teste>
+bash scripts/live-backup.sh save ~/.local/state/zonari-backup/<teste> <caminho absoluto>...
+bash scripts/live-backup.sh restore ~/.local/state/zonari-backup/<teste>
 ```
 O `restore` devolve o arquivo (conteúdo e modo), o link (mesmo quebrado) ou a ausência; remove só arquivos ou links que o teste criou; recusa um backup incompleto.
 
 ## Acrescentar testes
-- Lua: `omniwm-core/test_<nome>.lua`, descoberto sozinho. Se a suíte toca o disco, redirecione `os.getenv`/`io.open`/`os.execute` para um temporário, como `omniwm-core/test_omniwm.lua` e `omniwm-core/test_switcher.lua`.
+- Lua: `zonari-core/test_<nome>.lua`, descoberto sozinho. Se a suíte toca o disco, redirecione `os.getenv`/`io.open`/`os.execute` para um temporário, como `zonari-core/test_zonari.lua` e `zonari-core/test_switcher.lua`.
 - Shell: `tests/test-<nome>.sh`, descoberto sozinho; saia com código ≠ 0 em qualquer falha.
 
 ## Integração contínua (ainda não configurada)

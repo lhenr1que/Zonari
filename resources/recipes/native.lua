@@ -10,5 +10,5 @@ hl.config({ decoration = { dim_inactive = true, dim_strength = 0.15 } })
 -- 13: "application is not responding" dialog
 hl.config({ misc = { enable_anr_dialog = true } })
 
--- 10: focus follows the pointer; clicking still raises (omniwm autoraise_ms adds raise-on-hover)
+-- 10: focus follows the pointer; clicking still raises (zonari autoraise_ms adds raise-on-hover)
 hl.config({ input = { follow_mouse = 1 } })

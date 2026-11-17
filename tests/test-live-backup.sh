@@ -3,31 +3,31 @@
 # and checks that restore puts back the file, the link (even broken) or the absence that was there before.
 set -u
 lb=$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd -P)/live-backup.sh
-t=$(mktemp -d "${TMPDIR:-/tmp}/omniwm-test-live-backup.XXXXXXXX") || exit 1
+t=$(mktemp -d "${TMPDIR:-/tmp}/zonari-test-live-backup.XXXXXXXX") || exit 1
 trap 'chmod -R u+rwx "$t" 2>/dev/null; rm -rf -- "$t"' EXIT
 fails=0
 is() { if eval "$2"; then echo "ok - $1"; else echo "FALHOU - $1"; fails=$((fails + 1)); fi; }
 run() { bash "$lb" "$@" > "$t/out" 2>&1; }
 
 h=$t/home st=$t/state/teste
-mkdir -p "$h/.config/omniwm" "$h/.local/bin" "$h/real"
-printf '{"bar_height":30}\n' > "$h/.config/omniwm/settings.json"; chmod 640 "$h/.config/omniwm/settings.json"
-echo old > "$h/real/omniwm-ui"
-ln -s "$h/real/omniwm-ui" "$h/.local/bin/omniwm-ui"
+mkdir -p "$h/.config/zonari" "$h/.local/bin" "$h/real"
+printf '{"bar_height":30}\n' > "$h/.config/zonari/settings.json"; chmod 640 "$h/.config/zonari/settings.json"
+echo old > "$h/real/zonari-ui"
+ln -s "$h/real/zonari-ui" "$h/.local/bin/zonari-ui"
 ln -s "$h/nowhere" "$h/.local/bin/broken"
-cfg=$h/.config/omniwm/settings.json ui=$h/.local/bin/omniwm-ui br=$h/.local/bin/broken
-new1=$h/.config/omniwm/new.json new2=$h/.local/bin/created
+cfg=$h/.config/zonari/settings.json ui=$h/.local/bin/zonari-ui br=$h/.local/bin/broken
+new1=$h/.config/zonari/new.json new2=$h/.local/bin/created
 before=$(cat "$cfg")
 
 is "save guarda arquivo, link, link quebrado e ausentes" 'run save "$st" "$cfg" "$ui" "$br" "$new1" "$new2"'
 # What a live test does: rewrite the file, repoint the link, replace the broken link with a file, create a link and a file.
 printf '{"bar_height":34}\n' > "$cfg.tmp" && mv "$cfg.tmp" "$cfg"
-ln -sfn "$t/repo-build/omniwm-ui" "$ui"
+ln -sfn "$t/repo-build/zonari-ui" "$ui"
 rm "$br"; echo file > "$br"
 ln -s "$t/x" "$new1"; echo made > "$new2"
 is "restore termina sem erro" 'run restore "$st"'
 is "arquivo volta com o mesmo conteúdo e modo" '[ "$(cat "$cfg")" = "$before" ] && [ "$(stat -c %a "$cfg")" = 640 ] && [ ! -L "$cfg" ]'
-is "link volta para o mesmo alvo" '[ -L "$ui" ] && [ "$(readlink "$ui")" = "$h/real/omniwm-ui" ] && [ "$(cat "$h/real/omniwm-ui")" = old ]'
+is "link volta para o mesmo alvo" '[ -L "$ui" ] && [ "$(readlink "$ui")" = "$h/real/zonari-ui" ] && [ "$(cat "$h/real/zonari-ui")" = old ]'
 is "link quebrado volta como link quebrado" '[ -L "$br" ] && [ "$(readlink "$br")" = "$h/nowhere" ] && [ ! -e "$br" ]'
 is "caminhos ausentes voltam a não existir" '[ ! -e "$new1" ] && [ ! -L "$new1" ] && [ ! -e "$new2" ]'
 is "diretório de estado apagado depois" '[ ! -e "$st" ] && [ -d "$t/state" ]'
@@ -44,7 +44,7 @@ is "save recusa diretório de estado já existente e não o altera" '! run save 
 is "restore recusa diretório alheio e não o apaga" '! run restore "$st" && [ "$(cat "$st/kept")" = mine ]'
 rm -rf "$st"
 
-run save "$st" "$cfg"; rm "$st/omniwm-live-backup"; echo changed > "$cfg"
+run save "$st" "$cfg"; rm "$st/zonari-live-backup"; echo changed > "$cfg"
 is "restore recusa backup sem a marca e não altera nada" '! run restore "$st" && [ "$(cat "$cfg")" = changed ] && [ -e "$st/1.data" ]'
 rm -rf "$st"; printf '%s\n' "$before" > "$cfg"
 
@@ -55,7 +55,7 @@ is "uso errado falha" '! run && ! run frobnicate && ! run save "$st" && ! run re
 if [ "$(id -u)" != 0 ]; then # root reads anything, so the copy cannot be made to fail
   echo secret > "$t/unreadable"; chmod 000 "$t/unreadable"
   is "falha ao copiar: save sai com erro e o backup incompleto não restaura" \
-    '! run save "$st" "$cfg" "$t/unreadable" && [ ! -e "$st/omniwm-live-backup" ] && ! run restore "$st" && [ -e "$st" ]'
+    '! run save "$st" "$cfg" "$t/unreadable" && [ ! -e "$st/zonari-live-backup" ] && ! run restore "$st" && [ -e "$st" ]'
 fi
 
 [ "$fails" -eq 0 ] || { echo "test-live-backup: $fails falha(s)"; exit 1; }

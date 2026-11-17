@@ -1,4 +1,4 @@
--- Runs a generated omniwm.lua with stub hl/modules and prints the final bind keys (omniwm-core/binds.lua list + override),
+-- Runs a generated zonari.lua with stub hl/modules and prints the final bind keys (zonari-core/binds.lua list + override),
 -- one per line, normalized, plus reserve:<side>=<px> lines for kw.setup's reserve (modifiers sorted, upper case). Used by tests/test-omarchy-plugin.sh.
 local file, core = arg[1], arg[2]
 package.path = core .. "/?.lua;" .. package.path
@@ -7,14 +7,14 @@ local captured
 local noop = setmetatable({}, { __index = function() return function() end end })
 package.preload["binds"] = function() return { install = function(_, o) captured = o end } end
 local setup_opts
-package.preload["omniwm"] = function()
+package.preload["zonari"] = function()
   return setmetatable({ setup = function(o) setup_opts = o end }, { __index = function() return function() end end })
 end
 package.preload["switcher"] = function() return noop end
 local unbound = {}
 hl = setmetatable({ plugin = {}, unbind = function(k) unbound[#unbound + 1] = k end }, { __index = function() return function() end end })
 dofile(file)
-assert(captured, "omniwm.lua did not call binds.install")
+assert(captured, "zonari.lua did not call binds.install")
 local function norm(k)
   local mods, rest = {}, {}
   for raw in k:gmatch("[^+]+") do

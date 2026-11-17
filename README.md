@@ -1,13 +1,13 @@
-# OmniWM (Omni Window Manager)
+# Zonari
 
-> Formerly *HyperVi* and, before that, *Kwinish*. Everything now carries the OmniWM name:
+> Formerly *OmniWM*, *HyperVi* and, before that, *Kwinish*. Everything now carries the Zonari name:
 >
 > | Before | Now |
 > |---|---|
-> | Lua module `kwinish`, `hl.plugin.kwinish`, options `plugin:kwinish:*` | `omniwm`, `hl.plugin.omniwm`, `plugin:omniwm:*` |
-> | `~/.config/kwinish/` (settings, layouts, rules) | `~/.config/omniwm/` (copied once by `omarchy/omniwm setup`) |
-> | `kwinish-ui`, `kwinish-bars.so`, window tags `kwinish-*` | `omniwm-ui`, `omniwm-bars.so`, `omniwm-*` |
-> | Omarchy plugin `hypervi`, `~/.config/hypr/hypervi.lua` | `omniwm`, `~/.config/hypr/omniwm.lua` |
+> | Lua module `kwinish`, `hl.plugin.kwinish`, options `plugin:kwinish:*` | `zonari`, `hl.plugin.zonari`, `plugin:zonari:*` |
+> | `~/.config/omniwm/` or `~/.config/kwinish/` (settings, layouts, rules) | `~/.config/zonari/` (copied once by `omarchy/zonari setup`) |
+> | `kwinish-ui`, `kwinish-bars.so`, window tags `kwinish-*` | `zonari-ui`, `zonari-bars.so`, `zonari-*` |
+> | Omarchy plugin `hypervi`, `~/.config/hypr/hypervi.lua` | `zonari`, `~/.config/hypr/zonari.lua` |
 >
 > Dated records (`docs/history`, `docs/port-0-57`, `docs/STATUS.md`, `docs/DEVELOPMENT_STATE.md`, `openspec/`) keep the names of their time.
 
@@ -19,9 +19,9 @@ Three cooperating layers; the Lua core owns window-management policy, and the UI
 
 | Layer | What | Needs |
 |---|---|---|
-| `omniwm-core/` (Lua) | Tiling/Scroll/Floating workspace policies, rules, quick tile/zones, one-axis maximize, pack to edge, show desktop, keep above, placement, auto-raise, hot corners, Alt+Tab logic and binds | Hyprland with a Lua config |
-| `omniwm-ui/` (Rust, `omniwm-ui`) | Alt+Tab overlay, window menu, layout picker/editor, Snap Assist, settings, shortcut dialog and fallback title bars | GTK4, gtk4-layer-shell |
-| `omniwm-bars/` (C++, `omniwm-bars`) | the title bar: a compositor plugin forked from hyprbars | Hyprland headers, librsvg; rebuilt for each Hyprland update |
+| `zonari-core/` (Lua) | Tiling/Scroll/Floating workspace policies, rules, quick tile/zones, one-axis maximize, pack to edge, show desktop, keep above, placement, auto-raise, hot corners, Alt+Tab logic and binds | Hyprland with a Lua config |
+| `zonari-ui/` (Rust, `zonari-ui`) | Alt+Tab overlay, window menu, layout picker/editor, Snap Assist, settings, shortcut dialog and fallback title bars | GTK4, gtk4-layer-shell |
+| `zonari-bars/` (C++, `zonari-bars`) | the title bar: a compositor plugin forked from hyprbars | Hyprland headers, librsvg; rebuilt for each Hyprland update |
 
 ## Title bars
 
@@ -31,44 +31,44 @@ double click maximizes, the wheel over the bar raises or lowers the window, and 
 right screen edge snaps it to a half, and on the top edge maximizes it (`snap_top_edge`, on by default). Dragging across the seam between two monitors takes an extra push of `seam_resistance` pixels (default 200, 0 turns it off). Bars show on every window; `floating_only`
 limits them to floating ones.
 
-**Snap preview and layouts.** While a window is dragged by its bar, a translucent rectangle shows where releasing it on a screen edge will put it. Holding **Shift** shows every zone of the active tiling layout (two columns, three columns, 2x2 grid, main and side, wide centre) and releasing snaps the window into the zone under the pointer. Pick the layout with `omniwm-ui layouts` (`SUPER + T`) or in the window menu. Make your own with the zone editor (`omniwm-ui zones`, `SUPER + CTRL + E`, or "Edit zones..." in the picker): split, add floating blocks, set the padding, load a preset to start from; layouts are saved in `~/.config/omniwm/layouts.json` and show up in the picker. Dragging a snapped window by its bar gives back its old size.
+**Snap preview and layouts.** While a window is dragged by its bar, a translucent rectangle shows where releasing it on a screen edge will put it. Holding **Shift** shows every zone of the active tiling layout (two columns, three columns, 2x2 grid, main and side, wide centre) and releasing snaps the window into the zone under the pointer. Pick the layout with `zonari-ui layouts` (`SUPER + T`) or in the window menu. Make your own with the zone editor (`zonari-ui zones`, `SUPER + CTRL + E`, or "Edit zones..." in the picker): split, add floating blocks, set the padding, load a preset to start from; layouts are saved in `~/.config/zonari/layouts.json` and show up in the picker. Dragging a snapped window by its bar gives back its old size.
 
-**Settings.** `omniwm-ui settings` (or "OmniWM settings..." under More actions in the window menu) opens a window with the title-bar, colour and snapping options (and the Snap Assist switch). Changes apply at once and are kept in `~/.config/omniwm/settings.json`, which the core applies on every config load; options you never touch there keep coming from your Hyprland config.
+**Settings.** `zonari-ui settings` (or "Zonari settings..." under More actions in the window menu) opens a window with the title-bar, colour and snapping options (and the Snap Assist switch). Changes apply at once and are kept in `~/.config/zonari/settings.json`, which the core applies on every config load; options you never touch there keep coming from your Hyprland config.
 
 **Window menu.** KWin-style, born from the bar: click the app icon or right-click the bar. Workspaces, maximize, minimize, keep above or below, fullscreen, no frame, hide from captures, snap, tiling layout, close. State shows as check marks.
 
-A plugin is locked to one Hyprland build, so after a Hyprland update the plugin can be stale. Then OmniWM runs in
-**emergency mode**: it does not load the plugin, shows a notification, and `omniwm-ui bars` draws fallback bars
+A plugin is locked to one Hyprland build, so after a Hyprland update the plugin can be stale. Then Zonari runs in
+**emergency mode**: it does not load the plugin, shows a notification, and `zonari-ui bars` draws fallback bars
 (layer-shell surfaces that sit above all windows, so they hide or clip when another window covers them). The pacman hook
-in the plugin package rebuilds the plugin after `hyprland` changes; or run `sudo omniwm-bars-rebuild`. Details in
+in the plugin package rebuilds the plugin after `hyprland` changes; or run `sudo zonari-bars-rebuild`. Details in
 [plugin operations](docs/PLUGIN.md).
 
 ## Omarchy
-OmniWM is an Omarchy plugin for Hyprland 0.56.2 (Omarchy 4.5) and 0.57+. The core and UI are the same; on 0.56.x setup builds the frozen title-bar tree `omniwm-bars-0.56/` (without the fixes made during the 0.57 port, see its README):
+Zonari is an Omarchy plugin for Hyprland 0.56.2 (Omarchy 4.5) and 0.57+. The core and UI are the same; on 0.56.x setup builds the frozen title-bar tree `zonari-bars-0.56/` (without the fixes made during the 0.57 port, see its README):
 ```sh
-omarchy plugin add https://github.com/lhenr1que/OmniWM --enable   # clones to ~/.config/omarchy/plugins/omniwm, adds the bar icon
-~/.config/omarchy/plugins/omniwm/omarchy/omniwm setup            # or click the bar icon; then: hyprctl reload
+omarchy plugin add https://github.com/lhenr1que/Zonari --enable   # clones to ~/.config/omarchy/plugins/zonari, adds the bar icon
+~/.config/omarchy/plugins/zonari/omarchy/zonari setup            # or click the bar icon; then: hyprctl reload
 ```
-`setup` builds `omniwm-ui` and the title-bar plugin into `~/.local/share/omniwm`, writes `~/.config/hypr/omniwm.lua` (yours to edit) and adds one `require("hypr.omniwm")` line to `hyprland.lua` (backup next to it). Binds use `SUPER + CTRL + SHIFT`, free in Omarchy's defaults; OmniWM's Alt+Tab is optional: setup asks, or `omniwm setup --alt-tab`, or later `omniwm alt-tab on|off` (it unbinds Omarchy's `ALT + TAB` pair). After a Hyprland update: `omniwm rebuild` (the icon asks for it). Undo: `omniwm remove`, then `omarchy plugin remove omniwm`. Status: `omniwm status`.
+`setup` builds `zonari-ui` and the title-bar plugin into `~/.local/share/zonari`, writes `~/.config/hypr/zonari.lua` (yours to edit) and adds one `require("hypr.zonari")` line to `hyprland.lua` (backup next to it). Binds use `SUPER + CTRL + ALT`, free in Omarchy's defaults; Zonari's Alt+Tab is optional: setup asks, or `zonari setup --alt-tab`, or later `zonari alt-tab on|off` (it unbinds Omarchy's `ALT + TAB` pair). After a Hyprland update: `zonari rebuild` (the icon asks for it). Undo: `zonari remove`, then `omarchy plugin remove zonari`. Status: `zonari status`.
 
 ## Try it
 > **The plugin alone is not enough.** Snap, the drag preview, Shift-drag zones, the window menu actions and every bind live in
-> the Lua core. If `require("omniwm")` is not in your Hyprland config (step 1), dragging a bar only moves the window; the plugin
+> the Lua core. If `require("zonari")` is not in your Hyprland config (step 1), dragging a bar only moves the window; the plugin
 > shows a one-time warning when it sees a drag with no core. Loading the core with `hyprctl eval` works for tests but is lost on
 > every config reload or restart.
 
-1. Core (required): copy or link `omniwm-core/` to `~/.local/share/omniwm/core`, add `resources/recipes/hyprland-snippet.lua` to your `hyprland.lua`
+1. Core (required): copy or link `zonari-core/` to `~/.local/share/zonari/core`, add `resources/recipes/hyprland-snippet.lua` to your `hyprland.lua`
    (check with `Hyprland --verify-config -c ~/.config/hypr/hyprland.lua`), optionally paste blocks from `resources/recipes/native.lua`.
-2. UI: `cargo build --release` in `omniwm-ui/`, put `omniwm-ui` on your `PATH`, start it from `exec-once` (Alt+Tab overlay) and
-   `omniwm-ui bars` for the fallback bars.
-3. Plugin: `make -C plugin abi`, then `hyprctl plugin load $PWD/omniwm-bars/omniwm-bars.so`. Turn off any other title-bar
+2. UI: `cargo build --release` in `zonari-ui/`, put `zonari-ui` on your `PATH`, start it from `exec-once` (Alt+Tab overlay) and
+   `zonari-ui bars` for the fallback bars.
+3. Plugin: `make -C zonari-bars abi`, then `hyprctl plugin load $PWD/zonari-bars/zonari-bars.so`. Turn off any other title-bar
    plugin first (hyprbars). Loading a plugin can crash Hyprland if the plugin is wrong; keep a way to restart the session.
 
 Packages (Arch, `makepkg` from a clone, nothing published to the AUR yet): `resources/packaging/PKGBUILD` (core and UI) and
 `resources/packaging/bars/PKGBUILD` (plugin, its sources, a rebuild script and a pacman hook that rebuilds it after `hyprland` updates).
 A real install, removal and upgrade have not been tested yet.
 
-Default binds with the default `mod = "SUPER"` ([table](omniwm-core/binds.lua), installed by `resources/recipes/hyprland-snippet.lua`):
+Default binds with the default `mod = "SUPER"` ([table](zonari-core/binds.lua), installed by `resources/recipes/hyprland-snippet.lua`):
 `SUPER + ALT + arrows` halves/top/bottom; `SUPER + ALT + Q/W/A/S` corners; `SUPER + ALT + Return` maximize;
 `SUPER + ALT + H/V` one axis; `SUPER + CTRL + ALT + arrows` pack; `SUPER + D` show desktop;
 `SUPER + ALT + T` keep above; `SUPER + T` layout picker; `SUPER + CTRL + E` zone editor.
@@ -85,10 +85,12 @@ on any failure. `--lua-only` runs just the Lua suites. The same command runs in 
 Changes go through [OpenSpec](openspec/) (proposals, designs, tasks and the accepted specs). `docs/STATUS.md`, `docs/DEVELOPMENT_STATE.md`, `docs/port-0-57/` and `docs/history/` are the author's working records: dated, kept as they were, and written for the author's machine (absolute paths in the live test scripts are deliberate). Most project documentation is in Portuguese.
 
 ## Known limits
-- Restore geometry lives in a Lua table and is lost on a omniwm-core/config reload. Show-desktop origins, keep-above and keep-below are kept in window tags and survive it; this does not make every state reload-safe.
+- Restore geometry lives in a Lua table and is lost on a zonari-core/config reload. Show-desktop origins, keep-above and keep-below are kept in window tags and survive it; this does not make every state reload-safe.
 - Title-bar drag ends through the compositor: if another client grabs input exactly on release, the drag continues until the next key or click (accepted for the alpha). Touch on the bar is off.
 - The fallback bars are layer-shell surfaces: not at window level, and they trail animated windows by up to 80 ms.
 - Recorded tests include two monitors, but cross-monitor drops, workspace modes on the second monitor and non-default scale/rotation still have pending scenarios. XWayland-only setups and a real Hyprland package upgrade are not established as validated.
 
 ## License
-MIT, see `LICENSE`. `omniwm-bars/` is a fork of hyprbars (BSD 3-Clause, `omniwm-bars/LICENSE.hyprland-plugins`, `omniwm-bars/NOTICE`).
+MIT, see `LICENSE`. `zonari-bars/` is a fork of hyprbars (BSD 3-Clause, `zonari-bars/LICENSE.hyprland-plugins`, `zonari-bars/NOTICE`).
+
+Applications retain their minimum window size. If a zone is narrower (for example OpenBot in a one-third zone), Zonari keeps the minimum width and positions the window within the screen; it may overlap a neighbouring zone.

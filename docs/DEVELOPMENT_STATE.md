@@ -1,3 +1,11 @@
+## Continuidade — 17/11/2026: Zonari
+
+Nome escolhido pelo dono: Zonari, evitando o projeto OmniWM para macOS. Renomeação de fontes, diretórios, UI, plugin, pacotes e documentação operacional retomada do trabalho interrompido. Migração prioriza ~/.config/omniwm sobre ~/.config/kwinish, sem apagar originais; teste falhou antes e passou depois.
+
+Correção de tamanho mínimo já commitada: 010e7b1 e 7af8e51. OpenBot impõe 960 px de largura; uma zona de um terço não pode reduzir isso. O núcleo preserva o mínimo e corrige a posição inclusive quando o app informa o mínimo depois. A sessão anterior registrou teste ao vivo e restauração da janela.
+
+Validação e instalação desta continuação: em andamento. Sem push autorizado. Repositório local agora Zonari, branch omarchy-plugin-0.57.2. Preservar registros históricos e configurações antigas. Teste após novo login permanece pendente.
+
 ## GitHub Actions — 01/11/2026
 
 As execuções nos commits `2050840` e `17bcaa4` falharam em `core/test_userdata.lua` e `tools/test-plugin-hostdrag.sh`. O workflow instala clang. A execução seguinte confirmou o teste hostdrag e mostrou que `os.execute` retorna ENOSYS no CI; o teste Lua usa `io.popen` para iniciar o processo filho sob timeout, preservando a verificação. Validação remota da correção Lua pendente. Os 35 testes Rust passaram e o plugin compilou nas duas execuções.

@@ -1,0 +1,27 @@
+#!/bin/sh
+# Rebuilds the zonari-bars plugin for the installed Hyprland (a plugin is locked to one Hyprland build).
+# Run by the pacman hook after hyprland changes, or by hand: sudo zonari-bars-rebuild
+# Never fails the pacman transaction: if the build fails the old plugin stays and Zonari runs in emergency mode.
+src=${ZONARI_PLUGIN_SRC:-/usr/share/zonari/plugin-src}
+dest=${ZONARI_PLUGIN_DEST:-/usr/lib/hyprland/plugins}
+
+if ! command -v g++ >/dev/null 2>&1 || ! command -v make >/dev/null 2>&1 || ! pkg-config --exists hyprland; then
+    echo "zonari-bars: g++, make and the hyprland headers are needed to rebuild the plugin (pacman -S gcc make hyprland)."
+    echo "zonari-bars: until then Zonari runs in emergency mode with its fallback title bars."
+    exit 0
+fi
+
+tmp=$(mktemp -d) || exit 0
+trap 'rm -rf "$tmp"' EXIT
+cp -r "$src"/. "$tmp"/
+
+if ! make -C "$tmp" abi >"$tmp/build.log" 2>&1; then
+    echo "zonari-bars: rebuild failed; last lines of the build log:"
+    tail -n 15 "$tmp/build.log"
+    echo "zonari-bars: the old plugin was kept; Zonari runs in emergency mode until a rebuild works."
+elif install -Dm755 "$tmp/zonari-bars.so" "$dest/zonari-bars.so" && install -Dm644 "$tmp/zonari-bars.abi" "$dest/zonari-bars.abi"; then
+    echo "zonari-bars: rebuilt for Hyprland $(pkg-config --modversion hyprland). Restart Hyprland or run: hyprctl plugin load $dest/zonari-bars.so"
+else
+    echo "zonari-bars: rebuilt, but installing it into $dest failed (see above); run: sudo zonari-bars-rebuild"
+fi
+exit 0
