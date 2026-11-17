@@ -92,9 +92,9 @@ local function run()
     get_active_window = function() return active end,
     get_active_workspace = function() return home end,
     get_config = function(key)
-      assert(key == "general.gaps_out" or key == "general.gaps_in" or key == "cursor.no_warps", key)
+      assert(key == "general.gaps_out" or key == "general.gaps_in" or key == "general.border_size" or key == "cursor.no_warps", key)
       if key == "cursor.no_warps" then return false end
-      return 0
+      return (CFG or {})[key] or 0
     end,
     config = function(t) if t.cursor then warps_log[#warps_log + 1] = t.cursor.no_warps end end,
     get_loaded_plugins = function() return {} end,
@@ -213,6 +213,32 @@ local function run()
   kw.tile("left")
   rect(manual, 40, 50, 400, 300)
   KWINISH_SETUP_OPTS = saved_opts
+  -- a snapped window's whole box (border + title bar + content) fills its zone, with the tiled layout's spacing: gaps_out to
+  -- the screen, 2 x gaps_in between neighbours (each window keeps gaps_in), the border inside the zone and the bar above the
+  -- content, so it never pokes into the next zone (Omarchy: gaps 10/5, border 2, bar 28; monitor 1600x1000)
+  CFG = { ["general.gaps_out"] = 10, ["general.gaps_in"] = 5, ["general.border_size"] = 2 }
+  kw.bar_height = 28
+  kw.tile("left")
+  rect(manual, 12, 40, 781, 948)
+  kw.tile("left") -- restore
+  rect(manual, 40, 50, 400, 300)
+  kw.tile("right")
+  rect(manual, 807, 40, 781, 948)
+  kw.tile("right")
+  local zones_seen = {}
+  hl.plugin = { kwinish = { clear_zones = function() end,
+    set_zone = function(m, z, x, y, w, h) if m == "TEST" then zones_seen[z] = { x, y, w, h } end end } }
+  kw.set_layout("grid")
+  hl.plugin = nil
+  local function same(t, x, y, w, h) return t and t[1] == x and t[2] == y and t[3] == w and t[4] == h end
+  assert(same(zones_seen.left, 10, 10, 785, 980), "edge zone preview = the box the window fills: " .. table.concat(zones_seen.left or {}, ","))
+  assert(same(zones_seen["z:3"], 10, 505, 785, 485), "layout zone preview = outer box: " .. table.concat(zones_seen["z:3"] or {}, ","))
+  kw.window_action(manual.address, "zone:3")
+  rect(manual, 12, 535, 781, 453) -- bottom-left: border inside, bar inside the zone, not over the zone above
+  kw.window_action(manual.address, "zone:3")
+  rect(manual, 40, 50, 400, 300)
+  kw.set_layout("off")
+  CFG, kw.bar_height = nil, nil
   active = a
   kw.set_workspace_mode(1, "tiling")
   assert(home.tiled_layout == "dwindle" and not a.floating)

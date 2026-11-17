@@ -45,8 +45,9 @@ local function num(v, side)
   return v or 0
 end
 
--- Work area of the window's monitor in layout coordinates, minus bars and outer gaps.
-local function work_area(mon)
+-- The monitor's area for whole window boxes (border + title bar + content), in layout coordinates: minus reserved
+-- space, outer gaps and setup's reserve. Zones and snaps divide this, like the tiled layout does.
+local function outer_area(mon)
   local scale = mon.scale or 1
   local mw, mh = mon.width / scale, mon.height / scale
   if (mon.transform or 0) % 2 == 1 then mw, mh = mh, mw end
@@ -58,9 +59,21 @@ local function work_area(mon)
   local ex = (KWINISH_SETUP_OPTS or {}).reserve or {}
   l, t = l + (tonumber(ex.left) or 0), t + (tonumber(ex.top) or 0)
   rr, b = rr + (tonumber(ex.right) or 0), b + (tonumber(ex.bottom) or 0)
-  local bh = bar_height() -- the bar sits above the window, so the window starts below it
-  return { x = mon.x + l, y = mon.y + t + bh, w = mw - l - rr, h = mh - t - b - bh }
+  return { x = mon.x + l, y = mon.y + t, w = mw - l - rr, h = mh - t - b }
 end
+
+-- The content rectangle of a window whose whole box is `r`: the border inside on every side, the title bar above the content.
+local function content(r)
+  if not r then return r end
+  local bw, bh = num(hl.get_config("general.border_size"), "left"), bar_height()
+  return { x = r.x + bw, y = r.y + bw + bh, w = r.w - 2 * bw, h = r.h - 2 * bw - bh }
+end
+
+-- Where window contents may go: the outer area less a border and the bar (placement, modes, pack, axis).
+local function work_area(mon) return content(outer_area(mon)) end
+
+-- Space between two snapped boxes: gaps_in on each, as between tiled windows.
+local function snap_gap() return 2 * num(hl.get_config("general.gaps_in"), "left") end
 
 local function rect_of(w)
   local x, y = xy(w.at, "x", "y")
@@ -131,8 +144,7 @@ end
 function M.tile(where, opts)
   opts = opts or {}
   local w = target(opts); if not w then return end
-  local gi = num(hl.get_config("general.gaps_in"), "left")
-  local r = geometry.tile_rect(work_area(opts.monitor or w.monitor), where, gi)
+  local r = content(geometry.tile_rect(outer_area(opts.monitor or w.monitor), where, snap_gap()))
   if r then place(w, r, "tile:" .. where) end
 end
 
@@ -535,11 +547,17 @@ load_user_layouts()
 M.layout = M.layout or load_layout()
 M.layout_gap = M.layout_gap -- padding between layout zones; nil: the compositor's gaps_in
 
-layout_rects = function(mon)
+-- The active layout's zones as whole boxes (what the drag preview shows); false marks a zone too small to use.
+local function layout_boxes(mon)
   local preset = layouts.find(M.layout)
   if not preset then return {} end
-  local gap = preset.gap or M.layout_gap or num(hl.get_config("general.gaps_in"), "left")
-  return layouts.zone_rects(preset.zones, work_area(mon), gap)
+  return layouts.zone_rects(preset.zones, outer_area(mon), preset.gap or M.layout_gap or snap_gap())
+end
+
+layout_rects = function(mon)
+  local out = {}
+  for i, r in ipairs(layout_boxes(mon)) do out[i] = r and content(r) end
+  return out
 end
 
 function M.layout_names()
@@ -564,17 +582,15 @@ function M.publish_zones()
   local p = hl.plugin and hl.plugin.kwinish
   if not (p and p.set_zone) then return end
   pcall(p.clear_zones)
-  local gi = num(hl.get_config("general.gaps_in"), "left")
-  local bh = bar_height()
   for _, mon in ipairs(hl.get_monitors()) do
-    local area = work_area(mon)
+    local area = outer_area(mon)
     for zone, where in pairs({ left = "left", right = "right", top = "max" }) do
-      local r = geometry.tile_rect(area, where, gi)
-      pcall(p.set_zone, mon.name, zone, r.x, r.y - bh, r.w, r.h + bh)
+      local r = geometry.tile_rect(area, where, snap_gap())
+      pcall(p.set_zone, mon.name, zone, r.x, r.y, r.w, r.h)
     end
     -- the active layout's zones, shown while Shift is held during a drag
-    for i, r in ipairs(layout_rects(mon)) do
-      if r then pcall(p.set_zone, mon.name, "z:" .. i, r.x, r.y - bh, r.w, r.h + bh) end -- false: a zone with no usable rect
+    for i, r in ipairs(layout_boxes(mon)) do
+      if r then pcall(p.set_zone, mon.name, "z:" .. i, r.x, r.y, r.w, r.h) end -- false: a zone with no usable rect
     end
   end
 end

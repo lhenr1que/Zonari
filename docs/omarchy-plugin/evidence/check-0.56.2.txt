@@ -490,42 +490,42 @@ ok - above the bar when there is no room below
 ok - wider than the monitor: starts at its left edge, top kept
 == tools: 12 arquivo(s)
 == Rust
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
      Running unittests src/main.rs (ui/target/debug/deps/kwinish_ui-dcd064271de70c43)
 
 running 37 tests
 test assist::choice_tests::pick_is_revalidated_by_the_core ... ok
-test bars::tests::curve_runs_from_left_edge_to_top_edge ... ok
 test bars::tests::colour_parse ... ok
-test bars::tests::gaps ... ok
-test bars::tests::rect_hits ... ok
-test bars::tests::socket_reply_rejects_stalled_and_oversized ... ok
 test assist::choice_tests::rejects_replaced_generation_and_missing_window ... ok
+test bars::tests::rect_hits ... ok
+test bars::tests::curve_runs_from_left_edge_to_top_edge ... ok
 test menu::tests::marks_follow_the_core ... ok
 test mode::tests::modes ... ok
-test menu::tests::workspace_modes_can_be_left_to_the_desktop ... ok
+test bars::tests::gaps ... ok
 test settings::tests::alt_tab_is_a_row_and_applies_by_reload ... ok
-test mon::tests::picks_monitor_by_point ... ok
 test settings::tests::colour_roundtrip ... ok
 test settings::tests::live_code_is_plain_lua ... ok
+test bars::tests::socket_reply_rejects_stalled_and_oversized ... ok
 test shortcut::tests::combos ... ok
+test menu::tests::workspace_modes_can_be_left_to_the_desktop ... ok
+test mon::tests::picks_monitor_by_point ... ok
 test shortcut::tests::conflict_check ... ok
-test menu::tests::move_and_resize_in_alpha1 ... ok
 test zones::tests::a_failed_backup_stops_the_save ... ok
 test zones::tests::a_failed_rename_leaves_the_old_file ... ok
 test zones::tests::a_file_that_is_not_text_is_kept_too ... ok
-test zones::tests::floating_block_delete_just_removes ... ok
-test zones::tests::edges_and_moving ... ok
-test zones::tests::file_roundtrip_and_slug ... ok
 test zones::tests::an_unreadable_file_stops_the_save ... ok
-test zones::tests::parse_drops_what_the_core_would_reject ... ok
 test zones::tests::atomic_write_keeps_a_backup_of_an_unreadable_file ... ok
+test zones::tests::edges_and_moving ... ok
+test menu::tests::move_and_resize_in_alpha1 ... ok
+test zones::tests::floating_block_delete_just_removes ... ok
+test zones::tests::file_roundtrip_and_slug ... ok
+test zones::tests::parse_drops_what_the_core_would_reject ... ok
 test zones::tests::split_and_delete_roundtrip ... ok
-test zones::tests::text_the_reader_refuses_is_never_written ... ok
 test zones::tests::layout_cases_agree_with_the_core ... ok
+test zones::tests::text_the_reader_refuses_is_never_written ... ok
+test bars::tests::socket_reply_rejects_oversized ... ok
 test zones::tests::valid_files_as_written_are_read_back ... ok
 test zones::tests::whitespace_is_kept_an_empty_file_is_not ... ok
-test bars::tests::socket_reply_rejects_oversized ... ok
 test assist::tests::parses_core_state ... ok
 test zones::tests::parse_refuses_what_the_core_refuses ... ok
 test zones::tests::a_file_the_reader_refuses_is_backed_up_before_saving ... ok
@@ -537,7 +537,7 @@ test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
 == plugin: plugin-0.56
 make: Entrando no diretório '/home/lh/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/HyperVi/plugin-0.56'
 
-g++ -O2 -shared -fPIC -std=c++2b -Wno-c++11-narrowing  --no-gnu-unique `pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon cairo librsvg-2.0` main.cpp barDeco.cpp BarPassElement.cpp PreviewPassElement.cpp icon.cpp  -o /tmp/kwinish-check.jr8xPDmJ/kwinish-bars.so `pkg-config --libs cairo librsvg-2.0`
+g++ -O2 -shared -fPIC -std=c++2b -Wno-c++11-narrowing  --no-gnu-unique `pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon cairo librsvg-2.0` main.cpp barDeco.cpp BarPassElement.cpp PreviewPassElement.cpp icon.cpp  -o /tmp/kwinish-check.jQelwifh/kwinish-bars.so `pkg-config --libs cairo librsvg-2.0`
 main.cpp: In function ‘PLUGIN_DESCRIPTION_INFO pluginInit(void*)’:
 main.cpp:439:38: warning: ‘bool HyprlandAPI::addConfigKeyword(void*, const std::string&, Hyprlang::PCONFIGHANDLERFUNC, Hyprlang::SHandlerOptions)’ is deprecated [-Wdeprecated-declarations]
   439 |         HyprlandAPI::addConfigKeyword(PHANDLE, "plugin:kwinish:button", onNewButton, Hyprlang::SHandlerOptions{});
