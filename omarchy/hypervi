@@ -148,7 +148,11 @@ cmd_alt_tab() {
   else say "alt_tab set, but $inc predates the option: run hypervi remove and hypervi setup to regenerate it"; fi
 }
 
-cmd_rebuild() { check_compatible; build_plugin; say "rebuilt; reload Hyprland to load it (hyprctl reload)"; }
+cmd_rebuild() {
+  check_compatible; build_plugin
+  # Hyprland reloads config plugins only when their list changes: the same path needs an explicit unload + load
+  say "rebuilt. Load it now with: hyprctl plugin unload $share/kwinish-bars.so; hyprctl plugin load $share/kwinish-bars.so (or log out and in)"
+}
 
 cmd_remove() {
   if [ -f "$main" ] && grep -qxF "$req" "$main"; then

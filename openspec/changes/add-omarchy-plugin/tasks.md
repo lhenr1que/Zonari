@@ -22,6 +22,7 @@
 
 ## 3. Ao vivo (dono; já possível na 0.56.2)
 
-- [ ] 3.1 `omarchy plugin add`, widget na barra, `hypervi setup`, recarga, barras e atalhos (roteiro OM em `docs/STATUS.md`).
+- [x] 2c.1 Ao vivo achou dois defeitos (corrigidos com teste vermelho antes): `kwinish-bars.so` vazio (mktemp antes do make: alvo "atualizado"; `red-empty-so.txt` → `green-empty-so.txt`) e nenhuma barra do HyperVi com as titlebars do Omarchy carregadas (o kwinish-bars cedia a qualquer `Hyprbar`; `red-hyprbars.txt` → `green-hyprbars.txt`, 58 ok). `verify-config` da config do Omarchy dá SIGSEGV mesmo sem o HyperVi (não usar como verificação).
+- [~] 3.1 Ao vivo pelo agente, com aprovação do dono (16/11/2026, Hyprland 0.56.2, Omarchy 4.5): `omarchy plugin add` do clone local, widget 󰖲 na barra, `hypervi setup --alt-tab`, `hyprctl reload`, plugin carregado, sem erros de config, barra do HyperVi única na janela (captura), par `ALT + TAB` do Omarchy substituído, `kwinish-ui` iniciado. Falta o dono: atalhos `SUPER + CTRL + SHIFT`, Alt+Tab, menu `ALT + F3`, arrasto pela barra, cliques do widget, novo login.
 - [ ] 3.2 `hypervi remove` e `omarchy plugin remove hypervi` deixam a sessão como antes.
 - [ ] 3.3 Arquivar a mudança e criar `openspec/specs/omarchy-plugin/spec.md`.

@@ -103,7 +103,7 @@ Os resultados deste bloco são históricos; a atualização da documentação n�
 
 ## Testes pendentes para o dono
 
-**OM. HyperVi como plugin do Omarchy (OpenSpec `add-omarchy-plugin`; escrito em 16/11/2026; não executado)**
+**OM. HyperVi como plugin do Omarchy (OpenSpec `add-omarchy-plugin`; escrito em 16/11/2026; instalado ao vivo pelo agente em 16/11 com aprovação do dono — falta o dono conferir atalhos, Alt+Tab, menu, arrasto e novo login)**
 Pré-requisito: Hyprland 0.56.2 (Omarchy 4.5; o setup usa `plugin-0.56/`) ou 0.57+. O setup mexe em `~/.config/hypr` (guardado antes). Em bash, um por vez:
 ```bash
 bash ~/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/HyperVi/tools/live-backup.sh save ~/.local/state/kwinish-backup/teste-om ~/.config/hypr/hyprland.lua ~/.config/hypr/hypervi.lua ~/.local/bin/kwinish-ui
