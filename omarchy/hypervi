@@ -29,6 +29,7 @@ ge() { [ -n "$1" ] && [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = 
 plugin_line() { case $(headers) in 0.56.*) echo 0.56 ;; *) echo 0.57 ;; esac; }
 plugin_dir() { [ "$(plugin_line)" = 0.56 ] && echo "$root/plugin-0.56" || echo "$root/plugin"; }
 abi_now() { sh "$(plugin_dir)/abi.sh" 2>/dev/null || true; }
+is_elf() { [ -s "$1" ] && [ "$(head -c4 "$1")" = $'\177ELF' ]; }
 configured() { [ -f "$inc" ] && [ -f "$main" ] && grep -qxF "$req" "$main"; }
 plugin_loaded() { [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && hyprctl plugin list 2>/dev/null | grep -q 'kwinish' ; }
 
@@ -64,8 +65,10 @@ build_plugin() {
   local dir; dir=$(plugin_dir)
   say "building the title-bar plugin for Hyprland $(headers) from ${dir#"$root"/}"
   mkdir -p "$share"
-  local tmp; tmp=$(mktemp "$share/.kwinish-bars.so.XXXXXX")
-  make -C "$dir" TARGET="$tmp" >&2 || { rm -f "$tmp"; die "plugin build failed"; }
+  # a name that does not exist yet, and -B: an existing (even empty) target would look up to date and make would skip the build
+  local tmp; tmp=$(mktemp -u "$share/.kwinish-bars.so.XXXXXX")
+  make -B -C "$dir" TARGET="$tmp" >&2 || { rm -f "$tmp"; die "plugin build failed"; }
+  is_elf "$tmp" || { rm -f "$tmp"; die "plugin build produced no ELF file ($tmp)"; }
   mv -f "$tmp" "$share/kwinish-bars.so" # a new file: never rewrites a .so the compositor has mapped
   abi_now >"$share/.abi.tmp"; mv -f "$share/.abi.tmp" "$share/kwinish-bars.abi"
 }
@@ -175,7 +178,7 @@ cmd_status() {
   local json
   json=$(jq -n --arg run "$run" --arg hdr "$hdr" --argjson compat $compat --argjson abi $abi_ok \
     --argjson conf "$(configured && echo true || echo false)" \
-    --argjson built "$([ -f "$share/kwinish-bars.so" ] && echo true || echo false)" \
+    --argjson built "$(is_elf "$share/kwinish-bars.so" && echo true || echo false)" \
     --argjson loaded "$(plugin_loaded && echo true || echo false)" \
     --argjson ui "$([ -x "$bin/kwinish-ui" ] && echo true || echo false)" \
     --arg root "$root" --arg min "$min" --arg line "$(plugin_line)" \

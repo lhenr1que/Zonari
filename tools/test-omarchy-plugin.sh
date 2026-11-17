@@ -81,7 +81,9 @@ EOF
 cat >"$fake/make" <<'EOF'
 #!/bin/sh
 echo "make $*" >>"$FAKE_LOG"
-for a in "$@"; do case "$a" in TARGET=*) : >"${a#TARGET=}" ;; esac; done
+# like make: an existing TARGET counts as up to date (no -B) and is left as it is; otherwise "build" an ELF
+force=; for a in "$@"; do [ "$a" = -B ] && force=1; done
+for a in "$@"; do case "$a" in TARGET=*) f=${a#TARGET=}; { [ -e "$f" ] && [ -z "$force" ]; } || printf '\177ELF fake plugin\n' >"$f" ;; esac; done
 EOF
 chmod +x "$fake"/*
 mkdir -p "$t/prefix/include/hyprland/src"
@@ -115,6 +117,13 @@ else bad "setup on 0.55.0 (exit $rc) must fail naming 0.56.2 and write nothing: 
 seed o56
 run o56 0.56.2 0.56.2 setup; rc=$?
 [ "$rc" = 0 ] && ok "setup on 0.56.2 succeeds" || bad "setup on 0.56.2 (exit $rc): $(cat "$t/out-o56")"
+[ "$(head -c4 "$t/home-o56/.local/share/hypervi/kwinish-bars.so" 2>/dev/null)" = $'\177ELF' ] && ok "setup on 0.56.2: plugin really built" || bad "setup on 0.56.2: plugin file empty or missing"
+# status must not call an empty file a built plugin
+: >"$t/home-o56/.local/share/hypervi/kwinish-bars.so"
+run o56 0.56.2 0.56.2 status --json
+jq -e '.plugin_built == false' "$t/out-o56" >/dev/null 2>&1 && ok "status: an empty kwinish-bars.so is not built" || bad "status: empty kwinish-bars.so reported as built"
+run o56 0.56.2 0.56.2 rebuild; rc=$?
+[ "$rc" = 0 ] && [ "$(head -c4 "$t/home-o56/.local/share/hypervi/kwinish-bars.so")" = $'\177ELF' ] && ok "rebuild replaces an empty plugin" || bad "rebuild (exit $rc) left the plugin empty"
 grep -qF -- "-C $root/plugin-0.56 " "$t/log-o56" 2>/dev/null && ok "setup on 0.56.2 builds plugin-0.56/" || bad "setup on 0.56.2 did not build plugin-0.56/: $(cat "$t/log-o56" 2>/dev/null)"
 run o56 0.56.2 0.56.2 status --json
 jq -e '.compatible == true and .plugin_line == "0.56" and .abi_ok == true' "$t/out-o56" >/dev/null 2>&1 && ok "status on 0.56.2: compatible, plugin line 0.56" \
@@ -136,7 +145,8 @@ run new 0.57.2 0.57.2 setup; rc=$?
 h=$t/home-new
 inc=$h/.config/hypr/hypervi.lua
 if [ "$rc" = 0 ]; then ok "setup on 0.57.2 succeeds"; else bad "setup on 0.57.2 (exit $rc): $(cat "$t/out-new")"; fi
-[ -f "$h/.local/share/hypervi/kwinish-bars.so" ] && ok "setup: plugin built into ~/.local/share/hypervi" || bad "setup: no ~/.local/share/hypervi/kwinish-bars.so"
+[ "$(head -c4 "$h/.local/share/hypervi/kwinish-bars.so" 2>/dev/null)" = $'\177ELF' ] && ok "setup: plugin built into ~/.local/share/hypervi (an ELF, not an empty file)" \
+  || bad "setup: ~/.local/share/hypervi/kwinish-bars.so missing or not built (make saw an up-to-date target?)"
 [ "$(cat "$h/.local/share/hypervi/kwinish-bars.abi" 2>/dev/null)" = "abc123_aq_0.16_hu_0.14_hg_0.6_hc_0.1_hlg_0.6" ] \
   && ok "setup: ABI receipt written" || bad "setup: ABI receipt wrong: $(cat "$h/.local/share/hypervi/kwinish-bars.abi" 2>&1)"
 [ -x "$h/.local/bin/kwinish-ui" ] && ok "setup: kwinish-ui installed on ~/.local/bin" || bad "setup: no ~/.local/bin/kwinish-ui"
