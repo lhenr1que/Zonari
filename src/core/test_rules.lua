@@ -1,0 +1,23 @@
+package.path = (arg[0]:match("(.*/)") or "./") .. "?.lua;" .. package.path
+local R = require("rules")
+local r = {}
+assert(R.toggle(r, "kitty", "above", true) and r.kitty.above)
+assert(R.toggle(r, "kitty", "below", true) and r.kitty.below and not r.kitty.above, "above and below exclude each other")
+assert(R.toggle(r, "com.x-y_Z", "workspace", 3) and r["com.x-y_Z"].workspace == 3)
+assert(R.toggle(r, "kitty", "rect", { 10, 20, 300, 200 }))
+local text = R.serialize(r)
+assert(text == '{"com.x-y_Z":{"workspace":3},"kitty":{"below":true,"rect":[10,20,300,200]}}', text)
+local back = R.parse(text)
+assert(back.kitty.below and back.kitty.rect[3] == 300 and back["com.x-y_Z"].workspace == 3, "roundtrip")
+assert(not R.toggle(r, "kitty", "rect", { 1, 2, 3, 4 }) and r.kitty.rect == nil, "second toggle turns it off")
+R.toggle(r, "kitty", "below", true); assert(r.kitty == nil, "empty class entry is removed")
+assert(not R.toggle(r, "bad class!", "above", true) and r["bad class!"] == nil, "invalid class refused")
+assert(next((R.parse("garbage {{"))) == nil and next((R.parse(nil))) == nil and next((R.parse(""))) == nil)
+assert(next((R.parse('{"a b":{"above":true},"ok":{"workspace":-2,"rect":[1,2,0,5],"above":"yes"}}'))) == nil, "bad entries dropped")
+-- code in the file (os.exit, loops): src/core/test_userdata.lua, in a child process, as it would end this suite with success
+R.forget(back, "kitty"); assert(back.kitty == nil)
+local sc = R.parse_shortcuts('{\n "kitty": "SUPER + ALT + K",\n "bad class": "SUPER + A",\n "x": "super + a", "com.y": "CTRL + F5"}')
+assert(sc.kitty == "SUPER + ALT + K" and sc["com.y"] == "CTRL + F5" and sc["bad class"] == nil and sc.x == nil, "shortcuts parsed and filtered")
+assert(next((R.parse_shortcuts(nil))) == nil and next((R.parse_shortcuts("garbage"))) == nil)
+assert(next((R.parse('{"k":{"rect":[0,0,300.5,200]}}'))) == nil and next((R.parse('{"k":{"rect":[0,0,1e309,200]}}'))) == nil, "non-integer rect dropped")
+print("rules ok")

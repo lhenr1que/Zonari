@@ -32,11 +32,11 @@ bin() {
 
 # repo <first word of each suite>...: a fresh fake checkout with one passing tools test.
 mkrepo() {
-  rm -rf "$repo" && mkdir -p "$repo/zonari-core" "$repo/tests" "$repo/scripts" "$repo/zonari-ui" "$repo/zonari-bars"
+  rm -rf "$repo" && mkdir -p "$repo/src/core" "$repo/tests" "$repo/scripts" "$repo/crates/zonari-ui" "$repo/src/bars"
   cp "$here/../scripts/check.sh" "$repo/scripts/check.sh"
   printf '%s\n' "exit \${TOOLS_RC:-0}" > "$repo/tests/test-dummy.sh"
   local i=0 w
-  for w; do i=$((i + 1)); echo "$w" > "$repo/zonari-core/test_$i.lua"; done
+  for w; do i=$((i + 1)); echo "$w" > "$repo/src/core/test_$i.lua"; done
 }
 
 # expect <exit code> <description> [args]: run check.sh from an unrelated cwd with a session-like environment.
@@ -55,15 +55,15 @@ check_log() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
 bin; mkrepo ok ok
 expect 0 "tudo passa"
 check_log "roda as duas suítes, tools, cargo test --locked e make" \
-  'has "lua zonari-core/test_1.lua" && has "lua zonari-core/test_2.lua" && has "cargo test --locked --manifest-path zonari-ui/Cargo.toml" && has "make -C zonari-bars TARGET="'
-check_log "plugin compilado no diretório temporário, nada em zonari-bars/" \
-  'grep -q "make -C zonari-bars TARGET=$t/tmp/zonari-check\.[^/]*/zonari-bars\.so$" "$log" && [ -z "$(ls -A "$repo/zonari-bars")" ]'
+  'has "lua src/core/test_1.lua" && has "lua src/core/test_2.lua" && has "cargo test --locked --manifest-path crates/zonari-ui/Cargo.toml" && has "make -C src/bars TARGET="'
+check_log "plugin compilado no diretório temporário, nada em src/bars/" \
+  'grep -q "make -C src/bars TARGET=$t/tmp/zonari-check\.[^/]*/zonari-bars\.so$" "$log" && [ -z "$(ls -A "$repo/src/bars")" ]'
 check_log "temporário apagado ao sair" '[ -z "$(ls -A "$t/tmp")" ]'
 
 mkrepo fail ok
 expect 1 "uma suíte Lua falha"
-check_log "as suítes seguintes ainda rodam" 'has "lua zonari-core/test_2.lua"'
-check_log "a falha aparece no resumo" 'grep -q "zonari-core/test_1.lua" "$out"'
+check_log "as suítes seguintes ainda rodam" 'has "lua src/core/test_2.lua"'
+check_log "a falha aparece no resumo" 'grep -q "src/core/test_1.lua" "$out"'
 
 mkrepo ok
 TOOLS_RC=3 expect 1 "um teste de tests/ falha"
@@ -79,8 +79,8 @@ done
 bin
 
 mkrepo
-expect 1 "nenhuma suíte zonari-core/test_*.lua"
-rm "$repo/tests/test-dummy.sh"; echo ok > "$repo/zonari-core/test_1.lua"
+expect 1 "nenhuma suíte src/core/test_*.lua"
+rm "$repo/tests/test-dummy.sh"; echo ok > "$repo/src/core/test_1.lua"
 expect 1 "nenhum teste tests/test-*.sh"
 
 mkrepo ok

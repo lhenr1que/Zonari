@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The one local validation command (and what CI will run): every zonari-core/test_*.lua, every tests/test-*.sh,
+# The one local validation command (and what CI will run): every src/core/test_*.lua, every tests/test-*.sh,
 # the Rust tests and a plugin build. Exits 1 if anything fails, a tool is missing or no suite is found; 2 on bad usage.
 # It never talks to the running desktop: tests get a temporary HOME/XDG and no session sockets. Not a security sandbox.
 #   bash scripts/check.sh             everything
@@ -44,18 +44,18 @@ run_each() {
 
 lua=${LUA:-lua}
 echo "== Lua"
-need "$lua" "suítes Lua" && { "$lua" -v; run_each "Lua" "$lua" "zonari-core/test_*.lua"; }
+need "$lua" "suítes Lua" && { "$lua" -v; run_each "Lua" "$lua" "src/core/test_*.lua"; }
 
 if [ -z "$lua_only" ]; then
   echo "== tools"
   run_each "tools" bash "tests/test-*.sh"
 
   echo "== Rust"
-  need cargo "testes Rust" && { cargo test --locked --manifest-path zonari-ui/Cargo.toml || fail "cargo test"; }
+  need cargo "testes Rust" && { cargo test --locked --manifest-path crates/zonari-ui/Cargo.toml || fail "cargo test"; }
 
   # Build into the temp dir: it never rewrites a .so the compositor may have mapped, and it always compiles.
-  # zonari-bars/ is the 0.57+ tree; with 0.56.x headers (Omarchy 4.5) the frozen zonari-bars-0.56/ is the one that can build
-  pdir=zonari-bars; case $(pkg-config --modversion hyprland 2>/dev/null) in 0.56.*) pdir=zonari-bars-0.56 ;; esac
+  # src/bars/ is the 0.57+ tree; with 0.56.x headers (Omarchy 4.5) the frozen src/bars-0.56/ is the one that can build
+  pdir=src/bars; case $(pkg-config --modversion hyprland 2>/dev/null) in 0.56.*) pdir=src/bars-0.56 ;; esac
   echo "== plugin: $pdir"
   need make "plugin" && { make -C "$pdir" TARGET="$tmp/zonari-bars.so" || fail "make -C $pdir"; }
 fi

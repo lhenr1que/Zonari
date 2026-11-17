@@ -1,6 +1,0 @@
-FALHOU - manifest.json missing or not JSON
-FALHOU - symlinks tracked (omarchy plugin validate refuses them): spike/verify/.local/share/kwinish/core
-FALHOU - omarchy-plugin-validate refuses the repository:
-    omarchy-plugin-validate: missing manifest.json in /tmp/kwinish-test-omarchy.lt2uTmRL/export
-FALHOU - omarchy/hypervi missing or not executable
-test-omarchy-plugin: 4 falha(s)

@@ -5,7 +5,7 @@
 #  2. no symlink is tracked (the validator refuses a plugin folder with one);
 #  3. omarchy/zonari status/setup/alt-tab/remove, against fake hyprctl, pkg-config, cargo and make in a temporary HOME:
 #     refuses a Hyprland older than 0.56.2 or headers that differ from the running compositor, writes the Lua include by
-#     temporary + rename, builds zonari-bars-0.56/ on 0.56.x and zonari-bars/ on 0.57+, adds one require line to hyprland.lua with a backup, and remove puts hyprland.lua back as it was;
+#     temporary + rename, builds src/bars-0.56/ on 0.56.x and src/bars/ on 0.57+, adds one require line to hyprland.lua with a backup, and remove puts hyprland.lua back as it was;
 #  4. both PKGBUILDs depend on hyprland>=0.57.
 # ZONARI_ROOT=<dir> checks another copy of the repository.
 set -u
@@ -113,7 +113,7 @@ if [ "$rc" != 0 ] && grep -q '0\.56\.2' "$t/out-old" && [ ! -e "$t/home-old/.loc
   && [ "$(cat "$t/home-old/.config/hypr/hyprland.lua")" = "$orig" ]; then ok "setup refuses Hyprland 0.55.0 and writes nothing"
 else bad "setup on 0.55.0 (exit $rc) must fail naming 0.56.2 and write nothing: $(cat "$t/out-old")"; fi
 
-# 0.56.2 (Omarchy 4.5): the core and UI are shared, the plugin comes from zonari-bars-0.56/
+# 0.56.2 (Omarchy 4.5): the core and UI are shared, the plugin comes from src/bars-0.56/
 seed o56
 run o56 0.56.2 0.56.2 setup; rc=$?
 [ "$rc" = 0 ] && ok "setup on 0.56.2 succeeds" || bad "setup on 0.56.2 (exit $rc): $(cat "$t/out-o56")"
@@ -124,18 +124,18 @@ run o56 0.56.2 0.56.2 status --json
 jq -e '.plugin_built == false' "$t/out-o56" >/dev/null 2>&1 && ok "status: an empty zonari-bars.so is not built" || bad "status: empty zonari-bars.so reported as built"
 run o56 0.56.2 0.56.2 rebuild; rc=$?
 [ "$rc" = 0 ] && [ "$(head -c4 "$t/home-o56/.local/share/zonari/zonari-bars.so")" = $'\177ELF' ] && ok "rebuild replaces an empty plugin" || bad "rebuild (exit $rc) left the plugin empty"
-grep -qF -- "-C $root/zonari-bars-0.56 " "$t/log-o56" 2>/dev/null && ok "setup on 0.56.2 builds zonari-bars-0.56/" || bad "setup on 0.56.2 did not build zonari-bars-0.56/: $(cat "$t/log-o56" 2>/dev/null)"
+grep -qF -- "-C $root/src/bars-0.56 " "$t/log-o56" 2>/dev/null && ok "setup on 0.56.2 builds src/bars-0.56/" || bad "setup on 0.56.2 did not build src/bars-0.56/: $(cat "$t/log-o56" 2>/dev/null)"
 run o56 0.56.2 0.56.2 status --json
 jq -e '.compatible == true and .plugin_line == "0.56" and .abi_ok == true' "$t/out-o56" >/dev/null 2>&1 && ok "status on 0.56.2: compatible, plugin line 0.56" \
   || bad "status on 0.56.2: $(cat "$t/out-o56")"
-[ -f "$root/zonari-bars-0.56/Makefile" ] && [ -f "$root/zonari-bars-0.56/main.cpp" ] && ok "zonari-bars-0.56/ has the sources" || bad "zonari-bars-0.56/ missing"
-for f in $(sed -n 's/^SRC *= *//p' "$root/zonari-bars-0.56/Makefile" 2>/dev/null); do [ -f "$root/zonari-bars-0.56/$f" ] || bad "zonari-bars-0.56/: Makefile source $f missing"; done
-fns=$(grep -ho 'addLuaFunction(PHANDLE, "zonari", "[a-z_]*"' "$root"/zonari-bars/*.cpp | cut -d'"' -f4 | sort -u)
-[ -n "$fns" ] || bad "no hl.plugin.zonari function found in zonari-bars/ (sources moved?)"
+[ -f "$root/src/bars-0.56/Makefile" ] && [ -f "$root/src/bars-0.56/main.cpp" ] && ok "src/bars-0.56/ has the sources" || bad "src/bars-0.56/ missing"
+for f in $(sed -n 's/^SRC *= *//p' "$root/src/bars-0.56/Makefile" 2>/dev/null); do [ -f "$root/src/bars-0.56/$f" ] || bad "src/bars-0.56/: Makefile source $f missing"; done
+fns=$(grep -ho 'addLuaFunction(PHANDLE, "zonari", "[a-z_]*"' "$root"/src/bars/*.cpp | cut -d'"' -f4 | sort -u)
+[ -n "$fns" ] || bad "no hl.plugin.zonari function found in src/bars/ (sources moved?)"
 for fn in $fns; do
-  grep -q "addLuaFunction(PHANDLE, \"zonari\", \"$fn\"" "$root"/zonari-bars-0.56/*.cpp 2>/dev/null || bad "zonari-bars-0.56/ lacks hl.plugin.zonari.$fn (the core calls the same API on both lines)"
+  grep -q "addLuaFunction(PHANDLE, \"zonari\", \"$fn\"" "$root"/src/bars-0.56/*.cpp 2>/dev/null || bad "src/bars-0.56/ lacks hl.plugin.zonari.$fn (the core calls the same API on both lines)"
 done
-ok "zonari-bars-0.56/ registers the same hl.plugin.zonari functions"
+ok "src/bars-0.56/ registers the same hl.plugin.zonari functions"
 
 seed skew
 run skew 0.57.2 0.57.1 setup; rc=$?
@@ -156,10 +156,10 @@ if [ "$rc" = 0 ]; then ok "setup on 0.57.2 succeeds"; else bad "setup on 0.57.2 
 grep -q -- '--locked' "$t/log-new" && ok "setup: cargo build --locked" || bad "setup: cargo not called with --locked"
 if [ -f "$inc" ] && HV_F="$inc" lua -e 'assert(loadfile(os.getenv("HV_F")))' 2>"$t/luac"; then ok "setup: zonari.lua written and compiles"
 else bad "setup: zonari.lua missing or invalid Lua: $(cat "$t/luac" 2>/dev/null)"; fi
-grep -qF "$root/zonari-core/?.lua" "$inc" 2>/dev/null && ok "zonari.lua: core from the plugin checkout" || bad "zonari.lua: core path is not $root/zonari-core"
+grep -qF "$root/src/core/?.lua" "$inc" 2>/dev/null && ok "zonari.lua: core from the plugin checkout" || bad "zonari.lua: core path is not $root/src/core"
 grep -qF "hl.plugin.load" "$inc" 2>/dev/null && grep -qF "$h/.local/share/zonari/zonari-bars.so" "$inc" && ok "zonari.lua: loads the built plugin" \
   || bad "zonari.lua: does not load $h/.local/share/zonari/zonari-bars.so"
-lua "$root/tests/testdata/omarchy-binds.lua" "$inc" "$root/zonari-core" >"$t/binds" 2>"$t/binds.err" || bad "zonari.lua binds could not be read: $(cat "$t/binds.err")"
+lua "$root/tests/testdata/omarchy-binds.lua" "$inc" "$root/src/core" >"$t/binds" 2>"$t/binds.err" || bad "zonari.lua binds could not be read: $(cat "$t/binds.err")"
 dups=$(cut -d= -f2 "$t/binds" | sort | uniq -d)
 [ -s "$t/binds" ] && [ -z "$dups" ] && ok "zonari.lua: $(wc -l <"$t/binds") binds, no two on the same keys" || bad "zonari.lua: binds on the same keys: $dups"
 for want in tile:left=ALT+CTRL+SUPER+LEFT tile:right=ALT+CTRL+SUPER+RIGHT tile:top=ALT+CTRL+SUPER+UP tile:bottom=ALT+CTRL+SUPER+DOWN \
@@ -171,7 +171,7 @@ done
 dock() { # dock <json for the dock key or empty> -> the reserve lines zonari.lua passes to kw.setup
   local hh=$t/dock-home; rm -rf "$hh"; mkdir -p "$hh/.config/omarchy"
   [ -n "$1" ] && printf '{"dock":%s}' "$1" >"$hh/.config/omarchy/shell.json"
-  HOME=$hh lua "$root/tests/testdata/omarchy-binds.lua" "$inc" "$root/zonari-core" 2>&1 | grep '^reserve:' | sort | tr '\n' ' '
+  HOME=$hh lua "$root/tests/testdata/omarchy-binds.lua" "$inc" "$root/src/core" 2>&1 | grep '^reserve:' | sort | tr '\n' ' '
 }
 [ "$(dock '')" = "reserve:bottom=51 " ] && ok "reserve: no shell.json -> dock at the bottom, 51 px" || bad "reserve without shell.json: '$(dock '')'"
 [ "$(dock '{"position":"left"}')" = "reserve:left=51 " ] && ok "reserve: dock on the left" || bad "reserve dock left: '$(dock '{"position":"left"}')'"
@@ -186,7 +186,7 @@ done
 ok "no Zonari bind on the Omarchy combos checked"
 # Alt+Tab: one switch, "alt_tab" in ~/.config/zonari/settings.json (also the settings window's); zonari.lua's line is the
 # fallback when the key is missing. On: Zonari's switcher and Omarchy's ALT + TAB pair unbound; off: nothing touched.
-eff() { HOME=$t/home-$1 XDG_CONFIG_HOME=$t/home-$1/.config lua "$root/tests/testdata/omarchy-binds.lua" "$t/home-$1/.config/hypr/zonari.lua" "$root/zonari-core" 2>&1 | grep '^alt_tab='; }
+eff() { HOME=$t/home-$1 XDG_CONFIG_HOME=$t/home-$1/.config lua "$root/tests/testdata/omarchy-binds.lua" "$t/home-$1/.config/hypr/zonari.lua" "$root/src/core" 2>&1 | grep '^alt_tab='; }
 sj() { cat "$t/home-$1/.config/zonari/settings.json" 2>/dev/null; }
 jq -e '.workspace_modes == false' <<<"$(sj new)" >/dev/null 2>&1 && ok "setup: workspace modes left to Omarchy's switcher (workspace_modes=false)" || bad "setup must write workspace_modes=false: $(sj new)"
 [ "$(eff new)" = "alt_tab=false unbind=" ] && jq -e '.alt_tab == false' <<<"$(sj new)" >/dev/null 2>&1 && ok "setup: Alt+Tab left to Omarchy, alt_tab=false in settings.json" \
@@ -285,7 +285,7 @@ grep -qE '^\s*property var state\b' "$w" && bad "bar widget redefines Item.state
 # 3c. coexisting with Omarchy's titlebars (omarchy-hyprland-titlebars: a hyprbars fork named "Hyprbar", attached to every
 # window and drawn only on floating-workspace windows): the Zonari bar must not skip a window for a Hyprbar, and
 # zonari.lua turns Omarchy's bar off so a window never gets two
-for tree in zonari-bars zonari-bars-0.56; do
+for tree in src/bars src/bars-0.56; do
   body=$(sed -n '/^static void onNewWindow/,/^}/p' "$root/$tree/main.cpp")
   grep -q '"ZonariBar"' <<<"$body" && ok "$tree: onNewWindow skips a window that already has a ZonariBar" || bad "$tree: onNewWindow must skip its own ZonariBar"
   grep -q '"Hyprbar"' <<<"$body" && bad "$tree: onNewWindow skips windows with a Hyprbar (Omarchy attaches one to every window)" || ok "$tree: onNewWindow does not give way to a Hyprbar"
@@ -294,7 +294,7 @@ grep -qF 'if hl.plugin and hl.plugin.hyprbars then' "$inc.keep" 2>/dev/null && g
   && ok "zonari.lua: turns Omarchy's titlebars off when they are loaded" || bad "zonari.lua: must set plugin.hyprbars.enabled = false when hl.plugin.hyprbars exists"
 
 # 4. PKGBUILDs
-for p in resources/packaging/PKGBUILD resources/packaging/bars/PKGBUILD; do
+for p in packaging/PKGBUILD packaging/bars/PKGBUILD; do
   grep -qE "depends=\(.*'hyprland>=0\.57'" "$root/$p" && ok "$p: depends on hyprland>=0.57" || bad "$p: must depend on hyprland>=0.57"
 done
 

@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
 # Alpha-1 title-bar input (openspec enable-titlebar-drag-alpha1, end policy alt5-rc), no Hyprland needed:
-#  1. builds and runs zonari-bars/test_input.cpp against zonari-bars/barInput.hpp (click decisions and pairs, yielding to a drag,
+#  1. builds and runs src/bars/test_input.cpp against src/bars/barInput.hpp (click decisions and pairs, yielding to a drag,
 #     the bar's drag session, grab messages);
 #  2. checks the plugin sources (the code that cannot run without the compositor): no route asks the compositor to end a
 #     drag, drags start through the helper, the bar learns the end from the compositor, no touch on the bar.
-# ZONARI_SRC=<dir> checks another copy of zonari-bars/ (ZONARI_CORE=<dir> of zonari-core/), ZONARI_CXXFLAGS adds compiler flags (both used to show the checks
+# ZONARI_SRC=<dir> checks another copy of src/bars/ (ZONARI_CORE=<dir> of src/core/), ZONARI_CXXFLAGS adds compiler flags (both used to show the checks
 # fail on the baseline: docs/port-0-57/evidence/T4-tests/run-red.sh).
 set -u
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P) || exit 1
-src=${ZONARI_SRC:-$root/zonari-bars}
-core=${ZONARI_CORE:-$root/zonari-core}
+src=${ZONARI_SRC:-$root/src/bars}
+core=${ZONARI_CORE:-$root/src/core}
 t=$(mktemp -d "${TMPDIR:-/tmp}/zonari-test-input.XXXXXXXX") || exit 1
 trap 'rm -rf -- "$t"' EXIT
 cxx=${CXX:-g++}
 command -v "$cxx" >/dev/null || { echo "FALHOU - falta o compilador $cxx"; exit 1; }
 fails=0
 
-if "$cxx" -std=c++2b -Wall -Wextra -Werror ${ZONARI_CXXFLAGS:-} -I "$src" "$root/zonari-bars/test_input.cpp" -o "$t/test_input"; then
+if "$cxx" -std=c++2b -Wall -Wextra -Werror ${ZONARI_CXXFLAGS:-} -I "$src" "$root/src/bars/test_input.cpp" -o "$t/test_input"; then
   "$t/test_input" || fails=$((fails + 1))
 else
-  echo "FALHOU - compilar zonari-bars/test_input.cpp"; fails=$((fails + 1))
+  echo "FALHOU - compilar src/bars/test_input.cpp"; fails=$((fails + 1))
 fi
 
 # absent: pattern must not appear in the file
@@ -47,8 +47,8 @@ hits=$( { for f in "$src"/*.cpp "$src"/*.hpp; do case ${f##*/} in test_*) contin
           for f in "$core"/*.lua; do case ${f##*/} in test_*) continue ;; esac; sed 's|--.*||' "$f" | grep -nE -- "$end_pat" | sed "s|^|${f##*/}:|"; done; } )
 n=$(ls "$src"/*.cpp "$src"/*.hpp "$core"/*.lua 2>/dev/null | grep -vc '/test_')
 if [ "$n" -lt 10 ]; then echo "FALHOU - alt5-rc inventory: only $n source files found"; fails=$((fails + 1))
-elif [ -n "$hits" ]; then echo "FALHOU - alt5-rc: no end request anywhere in zonari-bars/ or zonari-core/:"; sed 's/^/    /' <<<"$hits"; fails=$((fails + 1))
-else echo "ok - alt5-rc: no end request anywhere in zonari-bars/ or zonari-core/ ($n files)"; fi
+elif [ -n "$hits" ]; then echo "FALHOU - alt5-rc: no end request anywhere in src/bars/ or src/core/:"; sed 's/^/    /' <<<"$hits"; fails=$((fails + 1))
+else echo "ok - alt5-rc: no end request anywhere in src/bars/ or src/core/ ($n files)"; fi
 absent barDeco.cpp 'm_bCancelledDown|m_bTouchEv|m_touchId|m_unsnapAnim|stepUnsnap' "no touch state, no unsnap that pauses the compositor's move"
 absent barDeco.cpp 'ITouch|input\.touch|onTouch' "no touch on the bar"
 absent barDeco.hpp 'ITouch|onTouch|m_bCancelledDown|stepUnsnap' "header: no touch members"

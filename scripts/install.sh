@@ -14,8 +14,8 @@ case $prefix in /*) ;; *) echo 'prefix must be absolute' >&2; exit 2 ;; esac
 for c in cargo make pkg-config install; do command -v "$c" >/dev/null || { echo "missing tool: $c" >&2; exit 1; }; done
 version=$(pkg-config --modversion hyprland)
 case $version in
-  0.56.2) tree=zonari-bars-0.56 ;;
-  0.57.*) tree=zonari-bars ;;
+  0.56.2) tree=src/bars-0.56 ;;
+  0.57.*) tree=src/bars ;;
   *) echo "unsupported Hyprland headers: $version (tested sources: 0.56.2 and 0.57.x)" >&2; exit 1 ;;
 esac
 pkg-config --exists hyprland gtk4 gtk4-layer-shell-0 cairo librsvg-2.0 pixman-1 libdrm libinput libudev wayland-server xkbcommon
@@ -31,12 +31,14 @@ install -Dm755 "$CARGO_TARGET_DIR/release/zonari-ui" "$prefix/bin/zonari-ui"
 install -Dm755 "$work/zonari-bars.so" "$prefix/lib/zonari/zonari-bars.so"
 install -Dm644 "$work/zonari-bars.abi" "$prefix/lib/zonari/zonari-bars.abi"
 install -d "$prefix/share/zonari/core" "$prefix/share/zonari/recipes"
-for module in "$root"/zonari-core/*.lua; do
+for module in "$root"/src/core/*.lua; do
   case ${module##*/} in test_*) continue ;; esac
   install -m644 "$module" "$prefix/share/zonari/core/"
 done
-install -m644 "$root"/resources/recipes/*.lua "$prefix/share/zonari/recipes/"
+install -m644 "$root"/examples/*.lua "$prefix/share/zonari/recipes/"
 install -Dm644 "$root/LICENSE" "$prefix/share/licenses/zonari/LICENSE"
+install -Dm644 "$root/COPYRIGHT.md" "$prefix/share/licenses/zonari/COPYRIGHT.md"
+install -Dm644 "$root/$tree/NOTICE" "$prefix/share/licenses/zonari/NOTICE"
 install -Dm644 "$root/$tree/LICENSE.hyprland-plugins" "$prefix/share/licenses/zonari/LICENSE.hyprland-plugins"
 cat > "$work/zonari.lua" <<LUA
 -- Generated example: copy to your Hyprland config directory and edit before loading.
@@ -52,4 +54,4 @@ hl.on("hyprland.start", function() hl.exec_cmd("$prefix/bin/zonari-ui") end)
 LUA
 install -Dm644 "$work/zonari.lua" "$prefix/share/zonari/zonari.lua"
 echo "Installed for Hyprland $version under $prefix. Config and session unchanged."
-echo "Review $prefix/share/zonari/zonari.lua; see docs/INSTALL.md before loading."
+echo "Review $prefix/share/zonari/zonari.lua; see docs/installation.md before loading."

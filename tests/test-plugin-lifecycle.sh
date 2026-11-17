@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# PLUGIN_EXIT on Hyprland 0.57 (T6), no Hyprland needed: checks the order of zonari-bars/main.cpp's PLUGIN_EXIT body.
+# PLUGIN_EXIT on Hyprland 0.57 (T6), no Hyprland needed: checks the order of src/bars/main.cpp's PLUGIN_EXIT body.
 #  - no 0.56.2 m_renderPass: 0.57 passes live in the render session and the host clears them on reset();
 #  - Q1 (docs/port-0-57/QUIESCENCE.md): context().active() is read first, before the tooltip and its timer are released,
 #    and an active session is logged as a violation (unload cannot be vetoed);
 #  - the tooltip timer is removed from the event loop before the global SP is dropped; the 3 rule effects are unregistered;
-#  - Q1 counter: builds and runs zonari-bars/test_passlife.cpp (zonari-bars/passLife.hpp); both pass classes carry it and
+#  - Q1 counter: builds and runs src/bars/test_passlife.cpp (src/bars/passLife.hpp); both pass classes carry it and
 #    PLUGIN_EXIT logs a count left over.
-# ZONARI_SRC=<dir> checks another copy of zonari-bars/.
+# ZONARI_SRC=<dir> checks another copy of src/bars/.
 set -u
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P) || exit 1
-src=${ZONARI_SRC:-$root/zonari-bars}
+src=${ZONARI_SRC:-$root/src/bars}
 body=$(sed -n '/APICALL EXPORT void PLUGIN_EXIT/,/^}/p' "$src/main.cpp")
 fails=0
 [ -n "$body" ] || { echo "FALHOU - PLUGIN_EXIT not found in main.cpp"; exit 1; }
@@ -37,7 +37,7 @@ cxx=${CXX:-g++}
 if "$cxx" -std=c++2b -Wall -Wextra -Werror -I "$src" "$src/test_passlife.cpp" -o "$t/test_passlife"; then
   "$t/test_passlife" || fails=$((fails + 1))
 else
-  echo "FALHOU - compilar zonari-bars/test_passlife.cpp"; fails=$((fails + 1))
+  echo "FALHOU - compilar src/bars/test_passlife.cpp"; fails=$((fails + 1))
 fi
 for f in BarPassElement.hpp PreviewPassElement.hpp; do
   check 'grep -qE "^ +KwPass::SLife +[a-zA-Z_]+;" "$src/$f"' "Q1: $f counts its elements (KwPass::SLife member)"

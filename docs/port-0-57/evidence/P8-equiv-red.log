@@ -1,2 +1,0 @@
-FAIL - extract candidate calls: AssertionError: new: expected 10 statements, found 0 at []
-result: FAIL

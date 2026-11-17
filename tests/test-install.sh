@@ -24,10 +24,10 @@ test -x "$t/prefix/bin/zonari-ui"
 test -f "$t/prefix/lib/zonari/zonari-bars.so"
 test -f "$t/prefix/share/zonari/core/zonari.lua"
 grep -q "$t/prefix/lib/zonari/zonari-bars.so" "$t/prefix/share/zonari/zonari.lua"
-grep -q zonari-bars-0.56 "$t/make.log"
+grep -q src/bars-0.56 "$t/make.log"
 test ! -e "$HOME/.config"
 TEST_VERSION=0.57.2 bash "$root/scripts/install.sh" --prefix "$t/other"
-grep -q 'zonari-bars TARGET=' "$t/make.log"
+grep -q 'src/bars TARGET=' "$t/make.log"
 if TEST_VERSION=0.58.0 bash "$root/scripts/install.sh" --prefix "$t/unsupported"; then echo 'unsupported headers accepted'; exit 1; fi
 test ! -e "$t/unsupported"
 echo 'portable install: passed (0.56.2, 0.57.2, unsupported version, no config writes)'

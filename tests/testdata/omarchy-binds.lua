@@ -1,4 +1,4 @@
--- Runs a generated zonari.lua with stub hl/modules and prints the final bind keys (zonari-core/binds.lua list + override),
+-- Runs a generated zonari.lua with stub hl/modules and prints the final bind keys (src/core/binds.lua list + override),
 -- one per line, normalized, plus reserve:<side>=<px> lines for kw.setup's reserve (modifiers sorted, upper case). Used by tests/test-omarchy-plugin.sh.
 local file, core = arg[1], arg[2]
 package.path = core .. "/?.lua;" .. package.path

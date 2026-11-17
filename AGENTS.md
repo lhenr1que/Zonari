@@ -1,47 +1,10 @@
-# Zonari: regras para agentes (Claude Code, Codex)
+# Contributing with coding agents
 
-Gerenciamento de janelas estilo KDE para o Hyprland 0.56.2 e 0.57+ (barras específicas em `zonari-bars-0.56/` e `zonari-bars/`), em três camadas: `zonari-bars/` (C++), `zonari-core/` (Lua), `zonari-ui/` (Rust GTK4).
+Read README.md, CONTRIBUTING.md and docs/development.md before editing. Keep changes scoped to the user's request and preserve unrelated work.
 
-## Ler antes de mexer
-1. [Mapa documental](docs/README.md), [arquitetura atual](docs/ARCHITECTURE.md) e `docs/STATUS.md`, seção "Para a próxima sessão": implementação, estado e próximos passos.
-2. [Contribuição e armadilhas operacionais](CONTRIBUTING.md); [handoff original preservado](docs/history/handoffs/HANDOFF.md) para contexto histórico. `docs/HANDOFF.md` mantém um apontador de compatibilidade.
-3. `docs/API.md` (contratos e formatos) e `docs/CONFIGURAVEL.md` (opções do usuário): atualize-os quando mudar um contrato ou uma opção.
-4. [Produto](docs/product/README.md) e [decisões D-01 a D-45](docs/product/DECISIONS.md) quando a tarefa tratar da suíte futura. Aprovação de produto, implementação e validação são estados distintos. Preserve o grau literal de aprovação e a fonte; não transforme propostas técnicas, prompts ou mockups em requisitos atuais.
-5. `docs/DEVELOPMENT_STATE.md`, se existir: último marco, decisões, pendências e limites de autorização. Confirme o estado Git real e não presuma que ações planejadas foram executadas.
-
-## Documentação e proveniência
-- Arquitetura atual deve citar código e evidências datadas; divergências com requisitos vigentes continuam registradas em `docs/STATUS.md`.
-- API/CONFIGURAVEL mantêm os contratos e formatos atuais; OpenSpec mantém requisitos observáveis e mudanças incrementais. Produto futuro não substitui nenhum deles.
-- [Histórico e manifesto](docs/history/README.md) preservam originais e hashes. Não edite os originais preservados; corrija a leitura consolidada e registre a divergência.
-- `docs/product/drafts/` contém minutas externas, fora do OpenSpec vigente. Sua existência não autoriza aplicar tarefas, sincronizar specs ou arquivar mudanças.
-- Consolidação documental não autoriza migração do Hyprland, escolha de shell, implementação, publicação ou limpeza de worktrees.
-
-## Mudanças
-- Mudança de comportamento ou de contrato: pelo OpenSpec (`openspec/changes/`, `/opsx:propose` no Claude Code, `$openspec-propose` no Codex). Correção pequena e óbvia: direto, com teste.
-- Todo conserto começa por um teste que falha.
-- Nunca execute dados do usuário como Lua (`load`): os JSON são lidos durante a carga da config e um laço trava o compositor.
-- Grave arquivos do usuário por temporário + `rename`.
-
-## Validar
-```sh
-bash scripts/check.sh
-```
-Roda todas as suítes Lua (Lua 5.5, a do Hyprland instalado), os testes de `tests/`, `cargo test --locked` e compila o plugin num temporário, com HOME/XDG temporários; sai ≠ 0 se qualquer coisa falhar. Validação parcial e detalhes: `docs/TESTING.md`.
-Teste simulado não é teste ao vivo: diga qual foi feito.
-
-## Limites
-- Não carregue/descarregue o plugin, não use `sudo`, não mexa em `~/.config` do dono sem pedido. Isso é do dono.
-- O que só o dono pode verificar vai em `docs/STATUS.md`, "Testes pendentes para o dono", e também por inteiro na resposta do chat: comando (fish), o que deve acontecer, como desfazer.
-- Teste ao vivo que muda arquivo do dono: `bash scripts/live-backup.sh save` antes e `restore` para desfazer; nunca `rm` (ver `docs/TESTING.md`).
-- Todo roteiro de teste ao vivo deve incluir o comando para carregar/recarregar o plugin e depois o núcleo do repositório; nunca presumir que o plugin já está carregado (pedido do dono, 27/10/2026). O dono executa esses comandos.
-- Repositório local: sem push, fork ou PR sem pedido explícito. Commits: `git -c user.name=lhenr1que -c user.email=lhenriqueds99@gmail.com commit`.
-
-## Encerramento e continuidade
-Vale para todos os agentes, inclusive Hermes. Uma tarefa só está encerrada quando entrega o resultado, informa o estado Git, registra pendências e deixa contexto suficiente para a próxima sessão sem depender da conversa.
-- Verifique os critérios de aceitação autorizados; rode só as validações permitidas e informe resultados reais, distinguindo análise estática, teste simulado, build e teste ao vivo.
-- Registre arquivos alterados, branch/commit e testes. Não atribua a si alterações preexistentes nem limpe trabalho histórico.
-- Diferencie concluído, parcial, bloqueado e não iniciado. Planejamento ou investigação concluídos não são implementação nem validação concluídas.
-- Sem autorização, não faça commits, merges, instalações, implementações ou testes fora do escopo.
-- Com autorização de escrita, atualize `docs/DEVELOPMENT_STATE.md` (registro único de continuidade, curto e verificável; não crie outros arquivos de handoff). Em investigação somente leitura, produza relatório externo e indique o que incorporar depois.
-- Termine a resposta com **HANDOFF PARA PRÓXIMA SESSÃO**: objetivo e resultado; estado do repositório; decisões aprovadas e pendentes; evidências e documentos; riscos e bloqueios; próxima ação recomendada; limites de autorização da próxima etapa. Depois, encerre sem iniciar a próxima tarefa.
-- Aprovação de escrita anterior não vale para sessões futuras: reconfirme o escopo e respeite as confirmações de segurança da ferramenta.
+- Lua policy lives in src/core, GTK UI in crates/zonari-ui, Hyprland native code in src/bars and src/bars-0.56, Omarchy integration in omarchy.
+- Add a failing regression test before fixing a bug. Validate with `bash scripts/check.sh`. Distinguish unit tests, builds and live desktop tests.
+- Never execute user data as Lua. Write settings atomically; keep native plugins tied to the matching compositor ABI.
+- Do not load plugins, modify user configuration, use sudo or change the live desktop without authorization. Back up files before authorized live tests.
+- Preserve GPLv3 licensing and upstream BSD notices. Do not publish, merge or rename remotes unless requested.
+- Keep public documentation concise and current. Do not commit prompts, transcripts, handoffs, raw test logs or agent-specific skills/settings. Put temporary work records outside the repository.

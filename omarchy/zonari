@@ -8,7 +8,7 @@
 #   zonari rebuild           rebuild only the plugin (after a Hyprland update: the plugin is built for one exact Hyprland)
 #   zonari remove            undo setup: the require line, zonari.lua (kept as a backup if you edited it), the built files
 # Never uses sudo. Writes user files by temporary + rename. Needs Hyprland >= 0.56.2 with its headers at the same version:
-# 0.56.x builds the frozen zonari-bars-0.56/ tree, 0.57+ builds zonari-bars/; the Lua core and zonari-ui are the same.
+# 0.56.x builds the frozen src/bars-0.56/ tree, 0.57+ builds src/bars/; the Lua core and zonari-ui are the same.
 set -euo pipefail
 
 root=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd -P)
@@ -28,7 +28,7 @@ headers() { pkg-config --modversion hyprland 2>/dev/null || true; }
 ge() { [ -n "$1" ] && [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
 # plugin_dir: the plugin tree for the installed headers (0.56.x: zonari-bars-0.56, else plugin)
 plugin_line() { case $(headers) in 0.56.*) echo 0.56 ;; *) echo 0.57 ;; esac; }
-plugin_dir() { [ "$(plugin_line)" = 0.56 ] && echo "$root/zonari-bars-0.56" || echo "$root/zonari-bars"; }
+plugin_dir() { [ "$(plugin_line)" = 0.56 ] && echo "$root/src/bars-0.56" || echo "$root/src/bars"; }
 abi_now() { sh "$(plugin_dir)/abi.sh" 2>/dev/null || true; }
 is_elf() { [ -s "$1" ] && [ "$(head -c4 "$1")" = $'\177ELF' ]; }
 configured() { [ -f "$inc" ] && [ -f "$main" ] && grep -qxF "$req" "$main"; }
@@ -55,7 +55,7 @@ lua_safe() { case $1 in *\"* | *\\* | *$'\n'*) die "path not supported (quote, b
 
 build_ui() {
   say "building zonari-ui (cargo, a few minutes the first time)"
-  CARGO_TARGET_DIR="$share/target" cargo build --release --locked --manifest-path "$root/zonari-ui/Cargo.toml"
+  CARGO_TARGET_DIR="$share/target" cargo build --release --locked --manifest-path "$root/crates/zonari-ui/Cargo.toml"
   mkdir -p "$share/bin" "$bin"
   install -m755 "$share/target/release/zonari-ui" "$share/bin/zonari-ui"
   local tmp; tmp=$(mktemp "$bin/.zonari-ui.XXXXXX")
@@ -83,7 +83,7 @@ write_include() {
 local alt_tab = $alt -- used only when settings.json has no "alt_tab" (the settings window and zonari alt-tab on|off set it)
 local load_plugin = true -- the title bars; after a Hyprland update run: $root/omarchy/zonari rebuild
 
-package.path = "$root/zonari-core/?.lua;" .. package.path
+package.path = "$root/src/core/?.lua;" .. package.path
 do -- the switch the settings window shows: ~/.config/zonari/settings.json "alt_tab", read as data (settings.lua, no load)
   local kwjson, s = require("kwjson"), nil
   local dir = (os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")) .. "/zonari"
@@ -117,7 +117,7 @@ if alt_tab then
   sw.setup()
 end
 -- Zonari's layer on Omarchy is SUPER + CTRL + ALT (free there for these keys in Omarchy 4.5's binds). Left: the key in
--- Zonari's own table ($root/zonari-core/binds.lua, mod SUPER); right: the key used here. Edit the right side, false drops a bind.
+-- Zonari's own table ($root/src/core/binds.lua, mod SUPER); right: the key used here. Edit the right side, false drops a bind.
 local M = "SUPER + CTRL + ALT"
 require("binds").install(kw, { mod = "SUPER", switcher = alt_tab and sw or nil, menu = "ALT + F3", override = {
   ["SUPER + ALT + Left"] = M .. " + Left", ["SUPER + ALT + Right"] = M .. " + Right", -- halves

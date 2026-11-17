@@ -1,2 +1,0 @@
-fecf267
-working tree: só testes e esqueleto de API em barInput.hpp (comportamento alpha-0)

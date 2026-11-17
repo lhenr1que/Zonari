@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: BSD-3-Clause AND GPL-3.0-only
+// Derived from hyprbars (hyprwm/hyprland-plugins, BSD-3-Clause, Copyright (c) 2023 Hypr Development); Zonari changes GPL-3.0-only. See NOTICE.
+#include "BarPassElement.hpp"
+#include <hyprland/src/render/OpenGL.hpp>
+#include <hyprland/src/render/Renderer.hpp>
+#include "barDeco.hpp"
+
+using namespace Render::GL;
+
+CBarPassElement::CBarPassElement(const CBarPassElement::SBarData& data_) : data(data_) {
+    ;
+}
+
+std::vector<UP<IPassElement>> CBarPassElement::draw(Render::CRenderContext& ctx) {
+    data.deco->renderPass(ctx, ctx.m_data.pMonitor.lock(), data.a, data.presentation);
+    return {};
+}
+
+bool CBarPassElement::needsLiveBlur(Render::CRenderContext&) {
+    static auto PENABLEBLURGLOBAL = CConfigValue<Config::BOOL>("decoration:blur:enabled");
+
+    CHyprColor  color = data.deco->m_bForcedBarColor.value_or(CHyprColor{static_cast<uint64_t>(g_pGlobalState->config.barColor->value())});
+    color.a *= data.a;
+    const bool SHOULDBLUR = g_pGlobalState->config.barBlur->value() && *PENABLEBLURGLOBAL && color.a < 1.F;
+
+    return SHOULDBLUR;
+}
+
+std::optional<CBox> CBarPassElement::boundingBox(Render::CRenderContext& ctx) {
+    // Temporary fix: expand the bar bb a bit, otherwise occlusion gets too aggressive.
+    return data.deco->assignedBoxGlobal(data.presentation).translate(data.presentation.floatingOffset - ctx.m_data.pMonitor->m_position).expand(10);
+}
+
+bool CBarPassElement::needsPrecomputeBlur(Render::CRenderContext&) {
+    return false;
+}

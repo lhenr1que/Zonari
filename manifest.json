@@ -4,7 +4,7 @@
   "name": "Zonari",
   "version": "0.1.0",
   "author": "lhenr1que",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "description": "KWin-style window management for Hyprland 0.56.2 and 0.57.x: quick tile, zones, title bars, window menu. The bar widget shows its state and runs setup (omarchy/zonari).",
   "kinds": [
     "bar-widget"

@@ -1,3 +1,0 @@
-This spike once kept a symlink here: core -> /home/ryo/Downloads/ryoku-work/kwinish/core (a path of the author's old machine; the link was already dangling).
-It was removed on 2026-11-16 because `omarchy plugin validate` refuses any symlink in a plugin folder (OpenSpec add-omarchy-plugin).
-To rerun the spike, recreate it: ln -s "$PWD/core" spike/verify/.local/share/kwinish/core (from the repository root).

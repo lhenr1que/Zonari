@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# The drag-start helper (zonari-bars/hostDrag.hpp, P8-B), kept for the alpha-1, no compositor run:
-#  1. compiles zonari-bars/test_hostdrag.cpp (syntax only) with g++ and clang++ against the installed Hyprland headers, since
+# The drag-start helper (src/bars/hostDrag.hpp, P8-B), kept for the alpha-1, no compositor run:
+#  1. compiles src/bars/test_hostdrag.cpp (syntax only) with g++ and clang++ against the installed Hyprland headers, since
 #     no plugin source includes the helper while the title-bar drag is off;
 #  2. T9 / H1 (docs/port-0-57/evidence/Q4A1-alt5-contract.md): a decoration's DRAG_START may start a drag itself and still
 #     return false; begin() must look at the drag target again after asking the decorations, and leave that drag alone.
 #     Checked in the source order (the helper cannot run without the compositor).
-# ZONARI_SRC=<dir> checks another copy of zonari-bars/.
+# ZONARI_SRC=<dir> checks another copy of src/bars/.
 set -u
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P) || exit 1
-src=${ZONARI_SRC:-$root/zonari-bars}
+src=${ZONARI_SRC:-$root/src/bars}
 fails=0
 check() { if eval "$1"; then echo "ok - $2"; else echo "FALHOU - $2"; fails=$((fails + 1)); fi; }
 
 case $(pkg-config --modversion hyprland 2>/dev/null) in
-  0.56.*) echo "ok - 0.56 headers installed: compile step skipped (hostDrag.hpp exists only in zonari-bars/, the 0.57+ tree)"; hl056=1 ;;
+  0.56.*) echo "ok - 0.56 headers installed: compile step skipped (hostDrag.hpp exists only in src/bars/, the 0.57+ tree)"; hl056=1 ;;
 esac
 if [ -n "${hl056:-}" ]; then :
 elif inc=$(pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon 2>/dev/null); then

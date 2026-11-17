@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Part of Zonari (Copyright (c) 2026 lhenr1que).
+#pragma once
+#include <hyprland/src/render/pass/PassElement.hpp>
+#include "passLife.hpp"
+
+// The translucent preview of the area a dragged window will take when the button is released.
+class CPreviewPassElement : public IPassElement {
+  public:
+    struct SPreviewData {
+        CBox       box;   // monitor-local, in physical pixels
+        int        round = 0;
+        int        border = 2;
+        CHyprColor fill;
+        CHyprColor line;
+    };
+
+    CPreviewPassElement(const SPreviewData& data_) : data(data_) {}
+    virtual ~CPreviewPassElement() = default;
+
+    virtual std::vector<UP<IPassElement>> draw(Render::CRenderContext& ctx) override;
+    virtual bool                          needsLiveBlur(Render::CRenderContext&) override {
+        return false;
+    }
+    virtual bool needsPrecomputeBlur(Render::CRenderContext&) override {
+        return false;
+    }
+    virtual std::optional<CBox> boundingBox(Render::CRenderContext&) override {
+        return data.box;
+    }
+    virtual const char* passName() override {
+        return "CPreviewPassElement";
+    }
+    virtual ePassElementType type() override {
+        return EK_CUSTOM;
+    }
+
+  private:
+    SPreviewData  data;
+    KwPass::SLife life;
+};

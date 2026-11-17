@@ -1,18 +1,15 @@
-scripts/spikes/events.log
-scripts/spikes/hl-test/
-target/
-zonari-ui/target/
-scripts/spikes/ui.log
-scripts/spikes/menu.log
-scripts/spikes/bars.log
-zonari-bars/*.so
-zonari-bars/*.o
-zonari-bars/*.abi
-dist/
-.alethe/
+/target/
+/dist/
+/src/bars/*.so
+/src/bars/*.o
+/src/bars/*.abi
+/src/bars-0.56/*.so
+/src/bars-0.56/*.o
+/src/bars-0.56/*.abi
+/crates/zonari-ui/target/
 
-# machine-specific agent/tool config (generated, has local paths)
-.codex/config.toml
-zonari-bars-0.56/*.so
-zonari-bars-0.56/*.o
-zonari-bars-0.56/*.abi
+# Local tooling and work records
+/.agents/
+/.claude/
+/.codex/
+/.alethe/
