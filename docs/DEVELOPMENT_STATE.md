@@ -1,3 +1,11 @@
+## Encerramento da continuação — Zonari, 17/11/2026
+
+Renomeação commitada em 2673e87; correção adicional do cabeçalho AGENTS e evidências em commit posterior. Build completo passou (docs/omarchy-plugin/evidence/zonari-check.txt); teste de migração vermelho/verde preservado no mesmo diretório.
+
+Ao vivo: ~/.config/omarchy/plugins/zonari instalado e habilitado, zonari-bars carregado, ABI correta, núcleo configurado e zonari-ui executando. hyprctl configerrors vazio; 14 atalhos base registrados na máscara 76. Preferências e layout thirds copiados de omniwm sem apagar originais. Wrapper antigo removido; plugin Omarchy antigo removido. Backup de arquivos em ~/.local/state/zonari-backup/rename-20261117. A correção de tamanho mínimo foi testada ao vivo na sessão anterior, não repetida com mouse nesta continuação.
+
+GitHub continua lhenr1que/HyperVi; origin preservado, nenhum push. Links públicos Zonari exigem renomear o repositório remoto. Pendente: novo login e conferência visual pelo dono. Não encerrar a sessão automaticamente. Próxima ação: usuário confirma comportamento; push somente por pedido explícito.
+
 ## Continuidade — 17/11/2026: Zonari
 
 Nome escolhido pelo dono: Zonari, evitando o projeto OmniWM para macOS. Renomeação de fontes, diretórios, UI, plugin, pacotes e documentação operacional retomada do trabalho interrompido. Migração prioriza ~/.config/omniwm sobre ~/.config/kwinish, sem apagar originais; teste falhou antes e passou depois.
