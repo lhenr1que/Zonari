@@ -136,11 +136,18 @@ local function run()
       w.tags = tags
     elseif kind == "resize" then
       assert(a.exact)
-      -- like Hyprland: a client's minimum size wins, and the window stays centred on the requested box
+      w.size = { a.x, a.y }
+      -- like Hyprland: the client answers later with its minimum size, which wins, and the window is centred again on the
+      -- box it was asked to fill (wherever a move put that box meanwhile)
       local min = w.min or { 0, 0 }
-      local nw, nh = math.max(a.x, min[1]), math.max(a.y, min[2])
-      w.at = { w.at[1] - (nw - a.x) // 2, w.at[2] - (nh - a.y) // 2 }
-      w.size = { nw, nh }
+      if min[1] > a.x or min[2] > a.y then
+        serial = serial + 1
+        timers[#timers + 1] = { at = clock + 40, id = serial, fn = function()
+          local nw, nh = math.max(a.x, min[1]), math.max(a.y, min[2])
+          w.at = { w.at[1] - (nw - a.x) // 2, w.at[2] - (nh - a.y) // 2 }
+          w.size = { nw, nh }
+        end }
+      end
     elseif kind == "move" then
       if a.workspace then w.workspace = ws_lookup(a.workspace) else w.at = { a.x, a.y } end
     elseif kind == "alter_zorder" then
@@ -248,13 +255,13 @@ local function run()
   -- a window that will not shrink below its minimum (OpenBot: 960 px wide) keeps it, inside the screen, centred on the zone
   -- as far as the screen allows: the left half puts it at the left edge, not 80 px off screen
   manual.min, manual.size = { 960, 0 }, { 960, 300 }
-  kw.tile("left")
+  kw.tile("left"); advance(300)
   rect(manual, 0, 0, 960, 1000)
-  kw.tile("left") -- the same snap again still restores, though the window never matched the half it asked for
+  kw.tile("left"); advance(300) -- the same snap again still restores, though the window never matched the half it asked for
   rect(manual, 40, 50, 960, 300)
-  kw.tile("right")
+  kw.tile("right"); advance(300)
   rect(manual, 640, 0, 960, 1000)
-  kw.tile("right")
+  kw.tile("right"); advance(300)
   rect(manual, 40, 50, 960, 300)
   manual.min, manual.size = nil, { 400, 300 }
   active = a

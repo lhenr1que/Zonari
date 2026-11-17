@@ -81,21 +81,43 @@ local function rect_of(w)
   return { x = x, y = y, w = ww, h = hh }
 end
 
+-- Where a window of size (aw, ah) goes for box r when it is larger (a client minimum, e.g. OpenBot's 960 px): centred on r,
+-- kept inside the monitor's area. nil when it fits r.
+local function fit_larger(mon, r, aw, ah)
+  if not aw or (aw <= r.w + 0.5 and ah <= r.h + 0.5) then return nil end
+  local a = mon and work_area(mon)
+  local function fit(v, len, alen, lo, span)
+    v = v + (len - alen) / 2
+    if a then v = math.max(lo, math.min(v, lo + span - alen)) end
+    return math.floor(v + 0.5)
+  end
+  return { x = fit(r.x, r.w, aw, a and a.x, a and a.w), y = fit(r.y, r.h, ah, a and a.y, a and a.h), w = aw, h = ah }
+end
+
+local fit_gen = {} -- per window: the latest placement whose late fit check counts
+
 local function put(w, r)
   local sel = "address:" .. w.address
   hl.dispatch(hl.dsp.window.resize({ x = math.floor(r.w + 0.5), y = math.floor(r.h + 0.5), exact = true, window = sel }))
-  local x, y = r.x, r.y
-  -- a client with a larger minimum size keeps it (OpenBot: 960 px wide): centre it on r, then keep it on the screen,
-  -- instead of the top-left of r, which Hyprland would centre and push past the screen edge
-  local now = hl.get_window(sel)
-  local aw, ah = xy(now and now.size or {}, "x", "y")
-  if (aw or 0) > r.w + 0.5 or (ah or 0) > r.h + 0.5 then
-    local a = w.monitor and work_area(w.monitor)
-    local function fit(v, len, alen, lo, span) v = v + (len - alen) / 2; return a and math.max(lo, math.min(v, lo + span - alen)) or v end
-    x, y = fit(r.x, r.w, aw, a and a.x, a and a.w), fit(r.y, r.h, ah, a and a.y, a and a.h)
-  end
-  hl.dispatch(hl.dsp.window.move({ x = math.floor(x + 0.5), y = math.floor(y + 0.5), window = sel }))
-  return { x = math.floor(x + 0.5), y = math.floor(y + 0.5), w = aw or r.w, h = ah or r.h } -- where it really went
+  hl.dispatch(hl.dsp.window.move({ x = math.floor(r.x + 0.5), y = math.floor(r.y + 0.5), window = sel }))
+  -- a client may answer with a larger minimum size only later; Hyprland then centres it on r, past the screen edge.
+  -- Moving it back inside does not change its size, so nothing re-centres it.
+  local addr, mon = w.address, w.monitor
+  local gen = (fit_gen[addr] or 0) + 1
+  fit_gen[addr] = gen
+  hl.timer(function()
+    if fit_gen[addr] ~= gen then return end -- a later placement of this window owns the check
+    local now = hl.get_window(sel)
+    if not (now and now.floating) then return end
+    local aw, ah = xy(now.size or {}, "x", "y")
+    local ax, ay = xy(now.at or {}, "x", "y")
+    -- only that symptom: larger than r and centred on it; a window tiled, moved or resized since is left alone
+    if not (ax and aw) or math.abs(ax + aw / 2 - (r.x + r.w / 2)) > 1 or math.abs(ay + ah / 2 - (r.y + r.h / 2)) > 1 then return end
+    local f = fit_larger(mon, r, aw, ah)
+    if not f then return end
+    hl.dispatch(hl.dsp.window.move({ x = f.x, y = f.y, window = sel }))
+    if saved[addr] and saved[addr].snap == r then saved[addr].snap = f end -- the snap to undo is where it really is
+  end, { timeout = 150, type = "oneshot" })
 end
 
 local function target(opts)
@@ -123,7 +145,8 @@ local function place(w, r, key)
     if s.snap and not geometry.same(rect_of(w), s.snap) then s.rect, s.was_floating = rect_of(w), w.floating end
     s.key = key
   end
-  saved[w.address].snap = put(w, r)
+  put(w, r)
+  saved[w.address].snap = r
   local o = saved[w.address].rect
   plugin_call("remember", w.address, o.x, o.y, o.w, o.h, r.x, r.y, r.w, r.h)
   return true
