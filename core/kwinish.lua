@@ -54,6 +54,10 @@ local function work_area(mon)
   local go = hl.get_config("general.gaps_out")
   local l, t = num(r.left or r[1], "left") + num(go, "left"), num(r.top or r[2], "top") + num(go, "top")
   local rr, b = num(r.right or r[3], "right") + num(go, "right"), num(r.bottom or r[4], "bottom") + num(go, "bottom")
+  -- setup({ reserve = { bottom = N } }): room the compositor does not reserve, e.g. Omarchy's dock (no exclusive zone)
+  local ex = (KWINISH_SETUP_OPTS or {}).reserve or {}
+  l, t = l + (tonumber(ex.left) or 0), t + (tonumber(ex.top) or 0)
+  rr, b = rr + (tonumber(ex.right) or 0), b + (tonumber(ex.bottom) or 0)
   local bh = bar_height() -- the bar sits above the window, so the window starts below it
   return { x = mon.x + l, y = mon.y + t + bh, w = mw - l - rr, h = mh - t - b - bh }
 end

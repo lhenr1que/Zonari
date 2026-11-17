@@ -165,6 +165,18 @@ for want in tile:left=ALT+CTRL+SUPER+LEFT tile:right=ALT+CTRL+SUPER+RIGHT tile:t
   tile:max=ALT+CTRL+SUPER+RETURN pack:left=ALT+CTRL+SHIFT+SUPER+LEFT show_desktop:=ALT+CTRL+SUPER+M layouts:=ALT+CTRL+SUPER+L; do
   grep -qxF "$want" "$t/binds" && ok "bind $want" || bad "bind $want missing (got: $(grep "^${want%%=*}=" "$t/binds"))"
 done
+# reserve: Omarchy's dock (floating workspaces) has no exclusive zone; hypervi.lua keeps its band free from shell.json
+dock() { # dock <json for the dock key or empty> -> the reserve lines hypervi.lua passes to kw.setup
+  local hh=$t/dock-home; rm -rf "$hh"; mkdir -p "$hh/.config/omarchy"
+  [ -n "$1" ] && printf '{"dock":%s}' "$1" >"$hh/.config/omarchy/shell.json"
+  HOME=$hh lua "$root/tools/testdata/omarchy-binds.lua" "$inc" "$root/core" 2>&1 | grep '^reserve:' | sort | tr '\n' ' '
+}
+[ "$(dock '')" = "reserve:bottom=51 " ] && ok "reserve: no shell.json -> dock at the bottom, 51 px" || bad "reserve without shell.json: '$(dock '')'"
+[ "$(dock '{"position":"left"}')" = "reserve:left=51 " ] && ok "reserve: dock on the left" || bad "reserve dock left: '$(dock '{"position":"left"}')'"
+[ "$(dock '{"position":"bottom","autohide":true}')" = "" ] && ok "reserve: none when the dock hides itself" || bad "reserve autohide: '$(dock '{"autohide":true}')'"
+printf 'not json' >"$t/bad.json"
+[ "$(dock '"x"')" = "reserve:bottom=51 " ] && ok "reserve: an odd dock value falls back to the bottom" || bad "reserve with dock = string: '$(dock '"x"')'"
+
 # Omarchy 4.5 uses these (hyprctl binds, 16/11/2026): none of ours may land on them
 for used in CTRL+SHIFT+SUPER+LEFT CTRL+SHIFT+SUPER+A CTRL+SHIFT+SUPER+D CTRL+SHIFT+SUPER+T ALT+CTRL+SUPER+W ALT+CTRL+SUPER+D ALT+CTRL+SUPER+T ALT+CTRL+SUPER+E ALT+SUPER+LEFT SUPER+T; do
   grep -q "=$used\$" "$t/binds" && bad "a HyperVi bind lands on Omarchy's $used"

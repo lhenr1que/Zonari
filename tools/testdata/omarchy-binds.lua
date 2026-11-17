@@ -1,12 +1,15 @@
 -- Runs a generated hypervi.lua with stub hl/modules and prints the final bind keys (core/binds.lua list + override),
--- one per line, normalized (modifiers sorted, upper case). Used by tools/test-omarchy-plugin.sh.
+-- one per line, normalized, plus reserve:<side>=<px> lines for kw.setup's reserve (modifiers sorted, upper case). Used by tools/test-omarchy-plugin.sh.
 local file, core = arg[1], arg[2]
 package.path = core .. "/?.lua;" .. package.path
 local real = dofile(core .. "/binds.lua")
 local captured
 local noop = setmetatable({}, { __index = function() return function() end end })
 package.preload["binds"] = function() return { install = function(_, o) captured = o end } end
-package.preload["kwinish"] = function() return noop end
+local setup_opts
+package.preload["kwinish"] = function()
+  return setmetatable({ setup = function(o) setup_opts = o end }, { __index = function() return function() end end })
+end
 package.preload["switcher"] = function() return noop end
 hl = setmetatable({ plugin = {} }, { __index = function() return function() end end })
 dofile(file)
@@ -22,6 +25,7 @@ local function norm(k)
   for _, x in ipairs(mods) do if not seen[x] then seen[x] = true; m[#m + 1] = x end end
   return table.concat(m, "+") .. "+" .. table.concat(rest, "+")
 end
+for side, n in pairs(setup_opts and setup_opts.reserve or {}) do print("reserve:" .. side .. "=" .. tostring(n)) end
 for _, b in ipairs(real.list(captured.mod)) do
   local k = b.keys
   if captured.override and captured.override[k] ~= nil then k = captured.override[k] end

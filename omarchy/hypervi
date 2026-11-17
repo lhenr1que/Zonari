@@ -90,8 +90,20 @@ if load_plugin and hl.plugin and hl.plugin.load then
   if hl.plugin and hl.plugin.hyprbars then hl.config({ plugin = { hyprbars = { enabled = false } } }) end
 end
 
+-- Omarchy's dock (shown on floating workspaces) reserves no space: keep its band free so snaps, zones and Snap Assist
+-- stay above it. shortcut: 51 px is the default theme's dock (gap 3 + icon 36 + 2 x 6); set dock_px if yours differs.
+local dock_px = 51
+local reserve = {}
+do
+  local kwjson = require("kwjson")
+  local cfg = kwjson.decode(kwjson.read((os.getenv("HOME") or "") .. "/.config/omarchy/shell.json") or "{}")
+  local dock = type(cfg) == "table" and type(cfg.dock) == "table" and cfg.dock or {}
+  local side = ({ left = "left", right = "right", top = "top" })[dock.position] or "bottom"
+  if dock.autohide ~= true then reserve[side] = dock_px end
+end
+
 local kw = require("kwinish")
-kw.setup({ placement = "smart", autoraise_ms = 400 }) -- drop either option to turn it off
+kw.setup({ placement = "smart", autoraise_ms = 400, reserve = reserve }) -- drop placement or autoraise_ms to turn it off
 local sw = require("switcher")
 if alt_tab then
   hl.unbind("ALT + TAB") -- Omarchy's pair (default/hypr/bindings/tiling.lua); this file loads after it

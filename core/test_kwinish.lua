@@ -205,6 +205,14 @@ local function run()
   rect(manual, 0, 0, 800, 1000)
   kw.tile("left")
   rect(manual, 40, 50, 400, 300)
+  -- setup's reserve keeps room the compositor does not reserve (Omarchy's dock has no exclusive zone)
+  local saved_opts = KWINISH_SETUP_OPTS
+  KWINISH_SETUP_OPTS = { reserve = { bottom = 51, right = 10 } }
+  kw.tile("left")
+  rect(manual, 0, 0, 795, 949)
+  kw.tile("left")
+  rect(manual, 40, 50, 400, 300)
+  KWINISH_SETUP_OPTS = saved_opts
   active = a
   kw.set_workspace_mode(1, "tiling")
   assert(home.tiled_layout == "dwindle" and not a.floating)
