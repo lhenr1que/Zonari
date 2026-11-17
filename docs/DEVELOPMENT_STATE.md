@@ -22,7 +22,7 @@ Por solicitação do dono, os resultados brutos de `spike/nested-open/results/` 
   - Alt+Tab: chave `alt_tab` no `settings.json` (só do núcleo), interruptor em `kwinish-ui settings` (salvar roda `hyprctl reload`), `hypervi alt-tab on|off` e setup gravam a mesma chave. Ao vivo: desligar pela janela devolveu o `ALT + TAB` ao Omarchy; religado.
   - Novo `hypervi refresh`. Ferramentas: `wtype` não dispara atalhos do Hyprland (teclado virtual); usar entrada real.
   - Não reproduzido: a janela de configurações abriu uma vez em tela cheia (`fullscreen: 2`); reaberta, normal.
-  - Pendente de decisão do dono: esconder o submenu "Modo da área de trabalho" do HyperVi no Omarchy (o indicador do Omarchy já troca o modo; o Omarchy não tem comando para definir um modo, só alternar).
+  - Modos da área de trabalho (decisão do dono, 16/11: esconder no Omarchy): chave `workspace_modes` no `settings.json` (interruptor nas configurações); `false` tira o submenu do menu da janela; o setup no Omarchy grava `false`. Ao vivo: "Mais ações" sem o submenu.
 - **Não feito:** parte do teste ao vivo que exige o dono (OM em `STATUS.md`); risco a conferir ao vivo: os modos de workspace do Omarchy (`default/hypr/workspace-modes.lua`) e os do HyperVi no mesmo workspace. Sem commit, sem push.
 
 # Estado operacional do desenvolvimento
