@@ -160,31 +160,32 @@ cmd_setup() {
   build_plugin
   if [ -f "$inc" ]; then
     say "keeping your $inc"
-    [ "$alt" = true ] && set_alt_tab true
+    [ "$alt" = true ] && set_setting alt_tab true
   else
     if [ "$alt" = false ] && [ -t 0 ] && [ -t 1 ] && command -v gum >/dev/null \
       && gum confirm --default=false "Replace Omarchy's ALT + TAB with the HyperVi switcher (KWin-style, with previews)?"; then alt=true; fi
-    set_alt_tab "$alt"
+    set_setting alt_tab "$alt"
+    set_setting workspace_modes false # Omarchy's workspace indicator switches modes; the HyperVi menu leaves them out
     write_include "$alt"
   fi
   add_require
   say "done. Reload Hyprland (hyprctl reload) or log out and in. Binds: SUPER + CTRL + ALT + arrows (halves), U/I/J/K (corners), Return, L (layouts); full list in $inc"
 }
 
-# set_alt_tab true|false: the "alt_tab" key of ~/.config/kwinish/settings.json (the settings window's switch), other keys kept
-set_alt_tab() {
+# set_setting <key> true|false: one key of ~/.config/kwinish/settings.json (the settings window's switches), other keys kept
+set_setting() {
   local f=${XDG_CONFIG_HOME:-$HOME/.config}/kwinish/settings.json body
   mkdir -p "$(dirname "$f")"
   if [ -e "$f" ]; then jq -e 'type == "object"' "$f" >/dev/null 2>&1 || die "$f is not a JSON object: not overwriting it (fix or remove it)"; fi
   body=$(mktemp)
-  { [ -e "$f" ] && cat "$f" || echo '{}'; } | jq --argjson v "$1" '.alt_tab = $v' >"$body"
+  { [ -e "$f" ] && cat "$f" || echo '{}'; } | jq --arg k "$1" --argjson v "$2" '.[$k] = $v' >"$body"
   replace "$f" "$body"; rm -f "$body"
 }
 
 cmd_alt_tab() {
   local v
   case "${1:-}" in on) v=true ;; off) v=false ;; *) die "usage: hypervi alt-tab on|off" ;; esac
-  set_alt_tab "$v"
+  set_setting alt_tab "$v"
   say "ALT + TAB: $([ $v = true ] && echo HyperVi || echo Omarchy). Apply with: hyprctl reload (or use the switch in kwinish-ui settings)"
 }
 

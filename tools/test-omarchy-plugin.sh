@@ -186,6 +186,7 @@ ok "no HyperVi bind on the Omarchy combos checked"
 # fallback when the key is missing. On: HyperVi's switcher and Omarchy's ALT + TAB pair unbound; off: nothing touched.
 eff() { HOME=$t/home-$1 XDG_CONFIG_HOME=$t/home-$1/.config lua "$root/tools/testdata/omarchy-binds.lua" "$t/home-$1/.config/hypr/hypervi.lua" "$root/core" 2>&1 | grep '^alt_tab='; }
 sj() { cat "$t/home-$1/.config/kwinish/settings.json" 2>/dev/null; }
+jq -e '.workspace_modes == false' <<<"$(sj new)" >/dev/null 2>&1 && ok "setup: workspace modes left to Omarchy's switcher (workspace_modes=false)" || bad "setup must write workspace_modes=false: $(sj new)"
 [ "$(eff new)" = "alt_tab=false unbind=" ] && jq -e '.alt_tab == false' <<<"$(sj new)" >/dev/null 2>&1 && ok "setup: Alt+Tab left to Omarchy, alt_tab=false in settings.json" \
   || bad "setup default: $(eff new) / $(sj new)"
 seed alt; mkdir -p "$t/home-alt/.config/kwinish"; echo '{"bar_height": 30}' >"$t/home-alt/.config/kwinish/settings.json"

@@ -37,7 +37,10 @@ fn tog(label: &str, on: bool, action: &str) -> Item {
 
 // What the menu needs to know about the window; read from `hyprctl clients`, where the core also leaves tags.
 #[derive(Default)]
-struct State { mode: String, class: String, floating: bool, pinned: bool, maximized: bool, fullscreen: bool, ws: i64, above: bool, below: bool, noframe: bool, nocapture: bool, workspaces: Vec<i64> }
+struct State { mode: String, class: String, floating: bool, pinned: bool, maximized: bool, fullscreen: bool, ws: i64, above: bool, below: bool, noframe: bool, nocapture: bool, workspaces: Vec<i64>, no_modes: bool }
+
+/// settings.json "workspace_modes": false: the desktop's own switcher owns workspace modes (Omarchy), so the menu leaves them out.
+fn no_modes(settings: &serde_json::Value) -> bool { settings["workspace_modes"] == serde_json::Value::Bool(false) }
 
 fn hyprctl(args: &[&str]) -> String {
     Command::new("hyprctl").args(args).output().map(|o| String::from_utf8_lossy(&o.stdout).to_string()).unwrap_or_default()
@@ -65,6 +68,7 @@ fn read_state(addr: &str) -> State {
     let saved = crate::zones::read_json(&crate::zones::file_path().with_file_name("workspace-modes.json")).unwrap_or_default();
     let tiled = ws.as_array().and_then(|a| a.iter().find(|w| w["id"].as_i64() == Some(st.ws))).and_then(|w| w["tiledLayout"].as_str()).unwrap_or("dwindle").to_string();
     st.mode = saved_mode(&saved, st.ws).unwrap_or_else(|| if tiled == "scrolling" { "scrolling".into() } else { "tiling".into() });
+    st.no_modes = no_modes(&crate::zones::read_json(&crate::zones::file_path().with_file_name("settings.json")).unwrap_or_default());
     st.workspaces.sort();
     if st.ws > 0 && !st.workspaces.contains(&st.ws) { st.workspaces.push(st.ws); st.workspaces.sort(); }
     st
@@ -227,7 +231,7 @@ fn build(st: &State, addr: &str) -> Vec<Item> {
         more.push(Item::Sub { label: t("Window rules").into(), items: rule_items(st) });
     }
     // the mode of this workspace (a window's workspace id of 1 or more; special workspaces have none)
-    if st.ws >= 1 {
+    if st.ws >= 1 && !st.no_modes {
         let mut items = vec![
             tog(t("Tiling"), st.mode == "tiling", "mode:tiling"),
             tog(t("Scrolling"), st.mode == "scrolling", "mode:scrolling"),
@@ -518,5 +522,15 @@ mod tests {
             assert_eq!(acts.iter().any(|a| a.starts_with("tile:")), st.floating, "Snap only for floating windows");
             assert_eq!(acts.iter().any(|a| a.starts_with("mode:")), st.ws >= 1, "Workspace mode only on a normal workspace");
         }
+    }
+
+    // settings.json "workspace_modes": false (written by omarchy/hypervi setup) leaves workspace modes to the desktop's own switcher
+    #[test]
+    fn workspace_modes_can_be_left_to_the_desktop() {
+        let st = State { class: "foot".into(), floating: true, ws: 1, mode: "tiling".into(), workspaces: vec![1], no_modes: true, ..Default::default() };
+        let mut acts = vec![];
+        all_actions(&build(&st, "0x1"), &mut acts);
+        assert!(!acts.iter().any(|a| a.starts_with("mode:") || a.starts_with("columns:")), "no workspace mode entries");
+        assert!(no_modes(&serde_json::json!({"workspace_modes": false})) && !no_modes(&serde_json::json!({})) && !no_modes(&serde_json::json!({"workspace_modes": "no"})));
     }
 }

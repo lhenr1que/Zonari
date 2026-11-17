@@ -44,6 +44,7 @@ const ROWS: &[(&str, &str, &str, Kind)] = &[
     ("snap_preview", "Show where the window will land", "Mostrar onde a janela vai encaixar", Kind::Bool(true)),
     ("snap_assist", "Snap Assist (offer the other windows for the next zone)", "Snap Assist (oferecer as outras janelas para a próxima zona)", Kind::Bool(true)),
     ("alt_tab", "Alt+Tab opens the HyperVi switcher (off: the desktop's own; applied by a config reload)", "Alt+Tab abre o seletor do HyperVi (desligado: o do desktop; aplicado com uma recarga)", Kind::Bool(true)),
+    ("workspace_modes", "Workspace modes in the window menu (off: the desktop's own switcher)", "Modos da área de trabalho no menu da janela (desligado: o seletor do desktop)", Kind::Bool(true)),
     ("seam_resistance", "Push needed to cross to the next monitor (px, 0 = off)", "Empurrão para passar ao outro monitor (px, 0 = desliga)", Kind::Int(0, 2000, 200)),
 ];
 
@@ -67,7 +68,7 @@ pub fn rgba_to_argb(s: &str) -> Option<u32> {
 
 /// The value the compositor holds now (from the user's config, an earlier save, or the default), or None without the plugin.
 fn live(key: &str) -> Option<Value> {
-    if key == "snap_assist" || key == "alt_tab" { return None; } // core-only, not compositor options
+    if matches!(key, "snap_assist" | "alt_tab" | "workspace_modes") { return None; } // core/menu only, not compositor options
     let out = Command::new("hyprctl").args(["getoption", &format!("plugin:kwinish:{key}"), "-j"]).output().ok()?;
     let v: Value = serde_json::from_slice(&out.stdout).ok()?;
     v.get("int").or_else(|| v.get("str")).cloned()
@@ -81,7 +82,7 @@ fn load() -> Map<String, Value> {
 /// Lua that applies one change now: through the core's apply_settings when it has it, else straight to the compositor (an older
 /// core, e.g. the installed one before the package is updated, has no apply_settings and would make the change wait for a reload).
 pub fn live_code(key: &str, v: &Value) -> Option<String> {
-    if needs_reload(key) { return None; }
+    if needs_reload(key) || key == "workspace_modes" { return None; } // the menu reads workspace_modes each time it opens
     let lit = match v {
         Value::Bool(b) => b.to_string(),
         Value::Number(n) if n.is_i64() => n.to_string(),
@@ -226,5 +227,7 @@ mod tests {
         assert!(live_code("alt_tab", &Value::Bool(false)).is_none(), "a bind cannot change in place");
         assert!(needs_reload("alt_tab") && !needs_reload("snap_assist"));
         assert!(live("alt_tab").is_none(), "core-only, not a compositor option");
+        assert!(ROWS.iter().any(|r| r.0 == "workspace_modes" && matches!(r.3, Kind::Bool(true))));
+        assert!(live("workspace_modes").is_none() && live_code("workspace_modes", &Value::Bool(false)).is_none(), "read by the menu each time it opens");
     }
 }

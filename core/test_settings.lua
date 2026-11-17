@@ -9,6 +9,7 @@ local bad = S.parse('{"bar_height": 500, "bar_padding": 2.5, "enabled": "yes", "
 assert(next(bad) == nil, "out-of-range, wrong-type, unknown and odd values dropped")
 assert(next((S.parse("garbage {{"))) == nil and next((S.parse(nil))) == nil) -- code in the file: core/test_userdata.lua, in a child process
 assert(S.parse('{"alt_tab": false}').alt_tab == false and S.parse('{"alt_tab": "no"}').alt_tab == nil, "alt_tab is a boolean")
+assert(S.parse('{"workspace_modes": false}').workspace_modes == false and #S.plugin_configs({ workspace_modes = false }) == 0, "workspace_modes is the menu's")
 assert(#S.plugin_configs({ alt_tab = true }) == 0, "alt_tab is the core's (hypervi.lua binds ALT + TAB), not a plugin option")
 local cfg = S.plugin_configs({ snap_assist = false, bar_height = 30, enabled = true })
 assert(#cfg == 2 and cfg[1].plugin.kwinish.bar_height == 30 and cfg[2].plugin.kwinish.enabled == true, "core keys stay out, one table per key")

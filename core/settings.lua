@@ -1,6 +1,6 @@
 -- User settings, kept in ~/.config/kwinish/settings.json (written by `kwinish-ui settings`) and applied each time the core loads.
 -- Pure; runs under plain lua. Shape: {"bar_height":28,"bar_color":"rgba(26262ef7)","snap_assist":false, ...}
--- Every key except snap_assist and alt_tab is a plugin:kwinish:* option; ui/src/settings.rs has the same list (keep them in step).
+-- Every key except snap_assist, alt_tab and workspace_modes is a plugin:kwinish:* option; ui/src/settings.rs has the same list (keep them in step).
 local kwjson = require("kwjson")
 local M = {}
 
@@ -8,7 +8,7 @@ local enum = function(...) local t = {}; for _, v in ipairs({ ... }) do t[v] = t
 M.spec = {
   enabled = "bool", floating_only = "bool", bar_part_of_window = "bool", bar_precedence_over_border = "bool",
   bar_title_enabled = "bool", bar_blur = "bool", default_buttons = "bool", icon_on_hover = "bool", show_icon = "bool",
-  snap_top_edge = "bool", snap_preview = "bool", snap_assist = "bool", alt_tab = "bool",
+  snap_top_edge = "bool", snap_preview = "bool", snap_assist = "bool", alt_tab = "bool", workspace_modes = "bool",
   bar_height = { 10, 80 }, bar_padding = { 0, 40 }, bar_text_size = { 6, 40 }, bar_text_weight = { 100, 1000 },
   bar_button_padding = { 0, 40 }, seam_resistance = { 0, 2000 },
   bar_color = "color", inactive_bar_color = "color", ["col.text"] = "color", ["inactive_col.text"] = "color",
@@ -18,7 +18,7 @@ M.spec = {
   on_double_click = enum("maximize", "fullscreen", "minimize", "float", "close", "menu", "none"),
 }
 -- read by the core itself, not passed to the plugin; alt_tab is read by omarchy/hypervi's hypervi.lua when it binds ALT + TAB
-M.core_keys = { snap_assist = true, alt_tab = true }
+M.core_keys = { snap_assist = true, alt_tab = true, workspace_modes = true } -- workspace_modes: read by kwinish-ui menu
 
 local function valid(kind, v)
   if kind == "bool" then return type(v) == "boolean" end
