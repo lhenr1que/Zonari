@@ -9,7 +9,8 @@ Arquitetura: [ARCHITECTURE](ARCHITECTURE.md); workflow: [CONTRIBUTING](CONTRIBUT
 ## Limites atuais e produto futuro
 
 Atualizado em **01/11/2026** (branch do port para o Hyprland 0.57; o estado de cada etapa está em `docs/DEVELOPMENT_STATE.md`).
-- **Base: Hyprland 0.57.0.** A linha 0.56.2 fica no histórico do Git. O plugin é compilado para o Hyprland exato em que roda.
+- **Base: Hyprland 0.57.2** (16/11/2026: compila sem mudança contra os cabeçalhos do pacote Arch 0.57.2-1; testes ao vivo foram na 0.57.0). A linha 0.56.2 fica no histórico do Git. O plugin é compilado para o Hyprland exato em que roda. O Omarchy 4.5 (máquina do dono em 16/11) traz Hyprland 0.56.2.
+- **Plugin do Omarchy** (OpenSpec `add-omarchy-plugin`, ativa, 16/11/2026): `manifest.json`, `omarchy/hypervi` e widget da barra; simulado e validado pelo `omarchy-plugin-validate` real; suporta também a 0.56.2 com `plugin-0.56/` (congelado) e Alt+Tab opcional; teste ao vivo OM pendente.
 - **Consertados e aprovados ao vivo pelo dono em 01/11/2026** (roteiros CL e II; mudanças arquivadas):
   - `fix-core-lifecycle`: cascata do modo Floating (falha ao vivo de 28/10), procedência do modo ao minimizar e em "mostrar área de trabalho", origens de "mostrar área de trabalho" que se perdiam ao recarregar o núcleo, ajuste de colunas atrasado, ganchos de `setup()` duplicados na recarga, `zone` em tela cheia;
   - `fix-input-ipc`: clique e roda numa barra coberta pela janela da frente, símbolos dos botões por escala de monitor, socket das barras sem prazo, escolha do Snap Assist sem revalidação.
@@ -95,12 +96,31 @@ Os resultados deste bloco são históricos; a atualização da documentação n�
 1. Ler [AGENTS](../AGENTS.md), este arquivo, [arquitetura atual](ARCHITECTURE.md) e [HANDOFF histórico](history/handoffs/HANDOFF.md) (armadilhas: objetos de `hl.bind` por `hyprctl eval` derrubam o Hyprland; `window.open_early` não aceita flutuar/redimensionar; etiqueta posta por regra aparece como `nome*`).
 2. `git status` e `git log --oneline -5`; o último marco e o commit de referência estão em `docs/DEVELOPMENT_STATE.md` (o baseline `a2506c6` citado antes aqui é de 28/10, superado). Mudanças documentais não commitadas podem existir; não confundi-las com trabalho de código. Os diretórios não rastreados `.agents/skills/source-command-opsx-*` e as worktrees `kwinish-apply` e `.alethe/worktrees/job-0*` são antigos: não apagar sem o dono.
 3. Para trabalho de código, `bash tools/check.sh` é a validação de software prevista no AGENTS. Nesta tarefa exclusivamente documental, foram verificadas referências e preservação, sem executar suítes ou builds.
-4. A CLI `openspec` não está instalada (01/11/2026). Nenhuma mudança ativa em `openspec/changes/`: `add-pin-and-icon-tooltips` e `harden-user-data-io` foram arquivadas em 01/11/2026, depois dos testes 10 e 11 (que passaram), e a segunda criou o spec principal `user-data-io`. A conferência estrutural dos specs principais é `tools/test-openspec-specs.sh`.
+4. A CLI `openspec` não está instalada (01/11/2026). Mudança ativa desde 16/11/2026: `add-omarchy-plugin` (falta só o teste ao vivo OM e o arquivamento). Antes dela, nenhuma mudança ativa: `add-pin-and-icon-tooltips` e `harden-user-data-io` foram arquivadas em 01/11/2026, depois dos testes 10 e 11 (que passaram), e a segunda criou o spec principal `user-data-io`. A conferência estrutural dos specs principais é `tools/test-openspec-specs.sh`.
 5. Carregar o código do repositório no desktop é do dono, pelos comandos do roteiro de cada teste (plugin num `.so` temporário e depois o núcleo por `hyprctl eval`; vale até o próximo `hyprctl reload`). O caminho `~/Downloads/ryoku-work/kwinish` citado nos roteiros antigos não existe mais. Mudanças dentro de blocos protegidos por `KWINISH_*` só valem com um bloco novo ou com o pacote reinstalado.
 6. Delegação: `codex exec -s read-only` para revisão e `-s workspace-write` numa worktree nova para implementar funcionaram; o dono tem cota do Codex (GPT-6.1). Revisar o diff antes de juntar.
 7. A anotação anterior registrava o backup do teste 5 em `~/.local/state/kwinish-backup/teste-5`, sem desfazer executado pelo dono. O comando histórico de restauração é `bash ~/Downloads/ryoku-work/kwinish/tools/live-backup.sh restore ~/.local/state/kwinish-backup/teste-5`. Conferido em 01/11/2026: `~/.local/state/kwinish-backup/` está vazio, sem `teste-5`; nada a restaurar.
 
 ## Testes pendentes para o dono
+
+**OM. HyperVi como plugin do Omarchy (OpenSpec `add-omarchy-plugin`; escrito em 16/11/2026; não executado)**
+Pré-requisito: Hyprland 0.56.2 (Omarchy 4.5; o setup usa `plugin-0.56/`) ou 0.57+. O setup mexe em `~/.config/hypr` (guardado antes). Em bash, um por vez:
+```bash
+bash ~/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/HyperVi/tools/live-backup.sh save ~/.local/state/kwinish-backup/teste-om ~/.config/hypr/hyprland.lua ~/.config/hypr/hypervi.lua ~/.local/bin/kwinish-ui
+omarchy plugin add https://github.com/lhenr1que/HyperVi --enable    # antes do push: omarchy plugin add ~/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/HyperVi --enable (clona o commit da branch atual; exige commit)
+~/.config/omarchy/plugins/hypervi/omarchy/hypervi setup
+hyprctl reload                                                       # carrega o plugin (hl.plugin.load) e o núcleo (require) pelo hypervi.lua
+hyprctl plugin list                                                  # deve listar kwinish-bars
+~/.config/omarchy/plugins/hypervi/omarchy/hypervi status
+```
+Deve acontecer: ícone 󰖲 na barra (dica "falta setup" antes do passo 3, "active" depois); barras de título nas janelas; `SUPER + CTRL + SHIFT + Left` encaixa à esquerda; `SUPER + T` continua sendo o do Omarchy; `ALT + F3` abre o menu da janela; `hypervi alt-tab on` + `hyprctl reload` troca o `ALT + TAB` pelo switcher do HyperVi (`off` volta ao do Omarchy); clique no ícone abre as configurações, botão direito o seletor de layouts.
+Desfazer:
+```bash
+~/.config/omarchy/plugins/hypervi/omarchy/hypervi remove
+omarchy plugin remove hypervi --yes
+hyprctl reload
+bash ~/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/HyperVi/tools/live-backup.sh restore ~/.local/state/kwinish-backup/teste-om
+```
 
 Roteiros e resultados parciais preservados de 27–28/10. **Não executados nesta consolidação, nem autorizados por ela.** Antes de um teste futuro, conferir versões e caminhos; os comandos de instalação/desfazer abaixo refletem os pacotes e backups da data original. A auditoria de 28/10 já registra r172 instalado, mas não fornece resultado completo do teste 12.
 **Regra do dono: todo comando e todo teste deve ser escrito por inteiro na resposta do chat, nunca só apontado para este arquivo.** Cada item: o comando (fish), o que deve acontecer, como desfazer. Todo roteiro carrega o plugin e o núcleo do repositório primeiro.

@@ -34,6 +34,14 @@ A plugin is locked to one Hyprland build, so after a Hyprland update the plugin 
 in the plugin package rebuilds the plugin after `hyprland` changes; or run `sudo kwinish-bars-rebuild`. Details in
 [plugin operations](docs/PLUGIN.md).
 
+## Omarchy
+HyperVi is an Omarchy plugin for Hyprland 0.56.2 (Omarchy 4.5) and 0.57+. The core and UI are the same; on 0.56.x setup builds the frozen title-bar tree `plugin-0.56/` (without the fixes made during the 0.57 port, see its README):
+```sh
+omarchy plugin add https://github.com/lhenr1que/HyperVi --enable   # clones to ~/.config/omarchy/plugins/hypervi, adds the bar icon
+~/.config/omarchy/plugins/hypervi/omarchy/hypervi setup            # or click the bar icon; then: hyprctl reload
+```
+`setup` builds `kwinish-ui` and the title-bar plugin into `~/.local/share/hypervi`, writes `~/.config/hypr/hypervi.lua` (yours to edit) and adds one `require("hypr.hypervi")` line to `hyprland.lua` (backup next to it). Binds use `SUPER + CTRL + SHIFT`, free in Omarchy's defaults; HyperVi's Alt+Tab is optional: setup asks, or `hypervi setup --alt-tab`, or later `hypervi alt-tab on|off` (it unbinds Omarchy's `ALT + TAB` pair). After a Hyprland update: `hypervi rebuild` (the icon asks for it). Undo: `hypervi remove`, then `omarchy plugin remove hypervi`. Status: `hypervi status`.
+
 ## Try it
 > **The plugin alone is not enough.** Snap, the drag preview, Shift-drag zones, the window menu actions and every bind live in
 > the Lua core. If `require("kwinish")` is not in your Hyprland config (step 1), dragging a bar only moves the window; the plugin

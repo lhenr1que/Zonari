@@ -6,6 +6,15 @@ As execuções nos commits `2050840` e `17bcaa4` falharam em `core/test_userdata
 
 Por solicitação do dono, os resultados brutos de `spike/nested-open/results/` foram removidos da árvore principal; o experimento e seu resumo permanecem. Os arquivos estão no histórico Git no commit `2050840` e em backup ZIP local completo, criado e verificado antes da limpeza. Código, evidências de port e acervo documental de importação foram preservados. A limpeza não reescreve o histórico Git.
 
+## Resultado mais recente — Hyprland 0.57.2 e plugin do Omarchy (16/11/2026; pedido do dono: "atualizar para o Hyprland mais recente e transformar em plugin do Omarchy")
+
+- **Decisões do dono no chat (16/11):** empacotar primeiro (plugin `bar-widget` que instala o HyperVi atual; portar a UI para o shell Omarchy fica para depois); alvo 0.57.2 com teste ao vivo depois; o trabalho feito pelo agente OpenBot "Bot builder" (Claude), num clone em `~/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/HyperVi`, branch `omarchy-plugin-0.57.2` a partir de `5423a31`.
+- **Máquina (16/11, só consulta):** Omarchy 4.5.0, Hyprland 0.56.2-4 em execução e nos cabeçalhos; o Arch `extra` já tem 0.57.2-1 (com hyprutils 0.14.3, aquamarine 0.16.0), o canal do Omarchy não. Sem `clang++`, sem acesso ao docker.
+- **0.57.0 → 0.57.2:** diff dos cabeçalhos usados: só dois métodos não virtuais novos. Plugin compilado sem mudança contra os cabeçalhos do pacote Arch extraídos em `/tmp` (GCC 0 erros, 7 avisos). `check.sh` com esses cabeçalhos: tudo passa menos `test-plugin-hostdrag.sh` (falta `clang++`). Evidências em `docs/omarchy-plugin/evidence/`.
+- **Plugin do Omarchy (OpenSpec `add-omarchy-plugin`, ativa):** `manifest.json`, `omarchy/hypervi`, `omarchy/HyperViWidget.qml`, `tools/test-omarchy-plugin.sh` (vermelho 4 falhas → verde, 37 ok, inclusive `omarchy-plugin-validate` real; mutações 4/4), `PKGBUILD`s com `hyprland>=0.57`, link pendente `spike/verify/.local/share/kwinish/core` trocado por `core.README` (o validador recusa links). Atalhos `SUPER + CTRL + SHIFT` (verificado contra os 206 atalhos padrão do Omarchy 4.5); Alt+Tab do HyperVi desligado por padrão.
+- **0.56.2 e Alt+Tab (pedido seguinte do dono, 16/11):** `plugin-0.56/` (cópia congelada de `9850593:plugin`, sem os consertos do port: fix-input-ipc parte 1, `849bf16`, `874a9df`); o setup escolhe a árvore pela versão; Alt+Tab opcional (`setup --alt-tab`, pergunta, `hypervi alt-tab on|off`, com `hl.unbind` do par do Omarchy). Teste 50 ok, mutações 5/5, integração real em HOME temporário na 0.56.2 (build real, `verify-config` ok, remove restaura). `check.sh` passa inteiro na 0.56.2.
+- **Não feito:** teste ao vivo (OM em `STATUS.md`); risco a conferir ao vivo: os modos de workspace do Omarchy (`default/hypr/workspace-modes.lua`) e os do HyperVi no mesmo workspace. Sem commit, sem push.
+
 # Estado operacional do desenvolvimento
 
 Atualizado em **2026-11-01 (UTC)**. Registro curto de continuidade; não é especificação técnica nem documentação de produto. Atualizar somente com autorização de escrita. Confirmar sempre o Git e as evidências reais antes de agir.

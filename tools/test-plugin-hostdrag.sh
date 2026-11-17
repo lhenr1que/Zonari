@@ -12,7 +12,11 @@ src=${KWINISH_SRC:-$root/plugin}
 fails=0
 check() { if eval "$1"; then echo "ok - $2"; else echo "FALHOU - $2"; fails=$((fails + 1)); fi; }
 
-if inc=$(pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon 2>/dev/null); then
+case $(pkg-config --modversion hyprland 2>/dev/null) in
+  0.56.*) echo "ok - 0.56 headers installed: compile step skipped (hostDrag.hpp exists only in plugin/, the 0.57+ tree)"; hl056=1 ;;
+esac
+if [ -n "${hl056:-}" ]; then :
+elif inc=$(pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon 2>/dev/null); then
   for c in g++ clang++; do
     command -v "$c" >/dev/null || { echo "FALHOU - falta o compilador $c"; fails=$((fails + 1)); continue; }
     # shellcheck disable=SC2086

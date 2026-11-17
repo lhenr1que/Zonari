@@ -8,7 +8,7 @@ pkgdesc='HyperVi: KWin-style title bars for Hyprland (compositor plugin, fork of
 arch=('x86_64')
 url='https://github.com/lhenr1que/HyperVi'
 license=('MIT' 'BSD-3-Clause')
-depends=('hyprland' 'librsvg' 'cairo')
+depends=('hyprland>=0.57' 'librsvg' 'cairo')
 makedepends=('git' 'gcc' 'make' 'pkgconf')
 optdepends=('gcc: automatic rebuild after a Hyprland update' 'make: automatic rebuild after a Hyprland update')
 provides=('hypervi-bars-plugin')

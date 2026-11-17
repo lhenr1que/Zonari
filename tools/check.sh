@@ -54,8 +54,10 @@ if [ -z "$lua_only" ]; then
   need cargo "testes Rust" && { cargo test --locked --manifest-path ui/Cargo.toml || fail "cargo test"; }
 
   # Build into the temp dir: it never rewrites a .so the compositor may have mapped, and it always compiles.
-  echo "== plugin"
-  need make "plugin" && { make -C plugin TARGET="$tmp/kwinish-bars.so" || fail "make -C plugin"; }
+  # plugin/ is the 0.57+ tree; with 0.56.x headers (Omarchy 4.5) the frozen plugin-0.56/ is the one that can build
+  pdir=plugin; case $(pkg-config --modversion hyprland 2>/dev/null) in 0.56.*) pdir=plugin-0.56 ;; esac
+  echo "== plugin: $pdir"
+  need make "plugin" && { make -C "$pdir" TARGET="$tmp/kwinish-bars.so" || fail "make -C $pdir"; }
 fi
 
 if [ "${#failed[@]}" -gt 0 ]; then

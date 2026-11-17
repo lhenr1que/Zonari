@@ -12,3 +12,6 @@ dist/
 
 # machine-specific agent/tool config (generated, has local paths)
 .codex/config.toml
+plugin-0.56/*.so
+plugin-0.56/*.o
+plugin-0.56/*.abi
