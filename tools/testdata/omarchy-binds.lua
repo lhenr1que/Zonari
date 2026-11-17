@@ -11,7 +11,8 @@ package.preload["kwinish"] = function()
   return setmetatable({ setup = function(o) setup_opts = o end }, { __index = function() return function() end end })
 end
 package.preload["switcher"] = function() return noop end
-hl = setmetatable({ plugin = {} }, { __index = function() return function() end end })
+local unbound = {}
+hl = setmetatable({ plugin = {}, unbind = function(k) unbound[#unbound + 1] = k end }, { __index = function() return function() end end })
 dofile(file)
 assert(captured, "hypervi.lua did not call binds.install")
 local function norm(k)
@@ -25,6 +26,7 @@ local function norm(k)
   for _, x in ipairs(mods) do if not seen[x] then seen[x] = true; m[#m + 1] = x end end
   return table.concat(m, "+") .. "+" .. table.concat(rest, "+")
 end
+print("alt_tab=" .. tostring(captured.switcher ~= nil) .. " unbind=" .. table.concat(unbound, ","))
 for side, n in pairs(setup_opts and setup_opts.reserve or {}) do print("reserve:" .. side .. "=" .. tostring(n)) end
 for _, b in ipairs(real.list(captured.mod)) do
   local k = b.keys

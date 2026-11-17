@@ -127,7 +127,7 @@ ok - setup: cargo build --locked
 ok - setup: hypervi.lua written and compiles
 ok - hypervi.lua: core from the plugin checkout
 ok - hypervi.lua: loads the built plugin
-ok - hypervi.lua: 20 binds, no two on the same keys
+ok - hypervi.lua: 21 binds, no two on the same keys
 ok - bind tile:left=ALT+CTRL+SUPER+LEFT
 ok - bind tile:right=ALT+CTRL+SUPER+RIGHT
 ok - bind tile:top=ALT+CTRL+SUPER+UP
@@ -145,14 +145,16 @@ ok - reserve: dock on the left
 ok - reserve: none when the dock hides itself
 ok - reserve: an odd dock value falls back to the bottom
 ok - no HyperVi bind on the Omarchy combos checked
-ok - hypervi.lua: Alt+Tab off by default (Omarchy binds ALT + Tab)
-ok - default: alt_tab = false
-ok - setup --alt-tab: alt_tab = true
-ok - hypervi.lua: unbinds Omarchy's ALT + TAB pair when alt_tab is on
+ok - setup: Alt+Tab left to Omarchy, alt_tab=false in settings.json
+ok - setup --alt-tab: HyperVi switcher, Omarchy's pair unbound
+ok - setup --alt-tab: settings.json keeps the other keys
 ok - alt-tab off
-ok - alt-tab: written by temporary + rename
-ok - alt-tab on (still valid Lua)
-ok - setup --alt-tab on an existing hypervi.lua turns it on
+ok - alt-tab: settings.json written by temporary + rename
+ok - alt-tab on
+ok - setup --alt-tab on an existing install turns it on
+ok - no settings.json: hypervi.lua's fallback (written true by setup --alt-tab)
+ok - alt-tab refuses to overwrite a settings.json it cannot read
+ok - broken settings.json: hypervi.lua's fallback
 ok - refresh: rewrites an unedited hypervi.lua, keeps alt_tab
 ok - refresh: refuses an edited hypervi.lua and leaves it alone
 ok - alt-tab rejects anything but on/off
@@ -487,52 +489,53 @@ ok - above the bar when there is no room below
 ok - wider than the monitor: starts at its left edge, top kept
 == tools: 12 arquivo(s)
 == Rust
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
      Running unittests src/main.rs (ui/target/debug/deps/kwinish_ui-dcd064271de70c43)
 
-running 35 tests
+running 36 tests
 test assist::choice_tests::pick_is_revalidated_by_the_core ... ok
-test bars::tests::curve_runs_from_left_edge_to_top_edge ... ok
 test bars::tests::colour_parse ... ok
 test bars::tests::gaps ... ok
 test bars::tests::rect_hits ... ok
+test bars::tests::curve_runs_from_left_edge_to_top_edge ... ok
 test assist::choice_tests::rejects_replaced_generation_and_missing_window ... ok
 test bars::tests::socket_reply_rejects_stalled_and_oversized ... ok
 test menu::tests::marks_follow_the_core ... ok
 test mode::tests::modes ... ok
-test settings::tests::colour_roundtrip ... ok
 test mon::tests::picks_monitor_by_point ... ok
+test settings::tests::alt_tab_is_a_row_and_applies_by_reload ... ok
+test settings::tests::colour_roundtrip ... ok
 test settings::tests::live_code_is_plain_lua ... ok
 test shortcut::tests::combos ... ok
 test shortcut::tests::conflict_check ... ok
 test menu::tests::move_and_resize_in_alpha1 ... ok
-test zones::tests::a_failed_backup_stops_the_save ... ok
 test zones::tests::a_failed_rename_leaves_the_old_file ... ok
-test zones::tests::a_file_that_is_not_text_is_kept_too ... ok
+test zones::tests::a_failed_backup_stops_the_save ... ok
 test zones::tests::edges_and_moving ... ok
+test zones::tests::a_file_that_is_not_text_is_kept_too ... ok
 test zones::tests::an_unreadable_file_stops_the_save ... ok
-test zones::tests::floating_block_delete_just_removes ... ok
 test zones::tests::atomic_write_keeps_a_backup_of_an_unreadable_file ... ok
-test zones::tests::file_roundtrip_and_slug ... ok
+test zones::tests::floating_block_delete_just_removes ... ok
 test zones::tests::parse_drops_what_the_core_would_reject ... ok
+test zones::tests::split_and_delete_roundtrip ... ok
+test zones::tests::file_roundtrip_and_slug ... ok
 test zones::tests::layout_cases_agree_with_the_core ... ok
 test zones::tests::text_the_reader_refuses_is_never_written ... ok
-test zones::tests::split_and_delete_roundtrip ... ok
 test zones::tests::valid_files_as_written_are_read_back ... ok
-test zones::tests::whitespace_is_kept_an_empty_file_is_not ... ok
 test bars::tests::socket_reply_rejects_oversized ... ok
+test zones::tests::whitespace_is_kept_an_empty_file_is_not ... ok
+test assist::tests::parses_core_state ... ok
 test zones::tests::parse_refuses_what_the_core_refuses ... ok
 test zones::tests::a_file_the_reader_refuses_is_backed_up_before_saving ... ok
-test assist::tests::parses_core_state ... ok
 test zones::tests::read_stops_after_the_limit ... ok
 test zones::tests::json_agrees_with_the_core ... ok
 
-test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 
 == plugin: plugin-0.56
 make: Entrando no diretório '/home/lh/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/HyperVi/plugin-0.56'
 
-g++ -O2 -shared -fPIC -std=c++2b -Wno-c++11-narrowing  --no-gnu-unique `pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon cairo librsvg-2.0` main.cpp barDeco.cpp BarPassElement.cpp PreviewPassElement.cpp icon.cpp  -o /tmp/kwinish-check.9ObtnGex/kwinish-bars.so `pkg-config --libs cairo librsvg-2.0`
+g++ -O2 -shared -fPIC -std=c++2b -Wno-c++11-narrowing  --no-gnu-unique `pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon cairo librsvg-2.0` main.cpp barDeco.cpp BarPassElement.cpp PreviewPassElement.cpp icon.cpp  -o /tmp/kwinish-check.vCv93VoQ/kwinish-bars.so `pkg-config --libs cairo librsvg-2.0`
 main.cpp: In function ‘PLUGIN_DESCRIPTION_INFO pluginInit(void*)’:
 main.cpp:439:38: warning: ‘bool HyprlandAPI::addConfigKeyword(void*, const std::string&, Hyprlang::PCONFIGHANDLERFUNC, Hyprlang::SHandlerOptions)’ is deprecated [-Wdeprecated-declarations]
   439 |         HyprlandAPI::addConfigKeyword(PHANDLE, "plugin:kwinish:button", onNewButton, Hyprlang::SHandlerOptions{});

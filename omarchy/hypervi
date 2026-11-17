@@ -80,10 +80,16 @@ write_include() {
   cat >"$body" <<EOF
 -- HyperVi for Omarchy, written by \`hypervi setup\`. Edit freely: setup never overwrites this file.
 -- Undo everything with: $root/omarchy/hypervi remove
-local alt_tab = $alt -- true: ALT + TAB opens the HyperVi switcher instead of Omarchy's cycling (hypervi alt-tab on|off)
+local alt_tab = $alt -- used only when settings.json has no "alt_tab" (the settings window and hypervi alt-tab on|off set it)
 local load_plugin = true -- the title bars; after a Hyprland update run: $root/omarchy/hypervi rebuild
 
 package.path = "$root/core/?.lua;" .. package.path
+do -- the switch the settings window shows: ~/.config/kwinish/settings.json "alt_tab", read as data (settings.lua, no load)
+  local kwjson, s = require("kwjson"), nil
+  local dir = (os.getenv("XDG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")) .. "/kwinish"
+  s = require("settings").parse(kwjson.read(dir .. "/settings.json"))
+  if s.alt_tab ~= nil then alt_tab = s.alt_tab end
+end
 if load_plugin and hl.plugin and hl.plugin.load then
   hl.plugin.load("$share/kwinish-bars.so")
   -- Omarchy's floating-workspace titlebars (a hyprbars fork) would draw a second bar; this file loads after Omarchy's
@@ -154,26 +160,32 @@ cmd_setup() {
   build_plugin
   if [ -f "$inc" ]; then
     say "keeping your $inc"
-    [ "$alt" = true ] && cmd_alt_tab on
+    [ "$alt" = true ] && set_alt_tab true
   else
     if [ "$alt" = false ] && [ -t 0 ] && [ -t 1 ] && command -v gum >/dev/null \
       && gum confirm --default=false "Replace Omarchy's ALT + TAB with the HyperVi switcher (KWin-style, with previews)?"; then alt=true; fi
+    set_alt_tab "$alt"
     write_include "$alt"
   fi
   add_require
   say "done. Reload Hyprland (hyprctl reload) or log out and in. Binds: SUPER + CTRL + ALT + arrows (halves), U/I/J/K (corners), Return, L (layouts); full list in $inc"
 }
 
+# set_alt_tab true|false: the "alt_tab" key of ~/.config/kwinish/settings.json (the settings window's switch), other keys kept
+set_alt_tab() {
+  local f=${XDG_CONFIG_HOME:-$HOME/.config}/kwinish/settings.json body
+  mkdir -p "$(dirname "$f")"
+  if [ -e "$f" ]; then jq -e 'type == "object"' "$f" >/dev/null 2>&1 || die "$f is not a JSON object: not overwriting it (fix or remove it)"; fi
+  body=$(mktemp)
+  { [ -e "$f" ] && cat "$f" || echo '{}'; } | jq --argjson v "$1" '.alt_tab = $v' >"$body"
+  replace "$f" "$body"; rm -f "$body"
+}
+
 cmd_alt_tab() {
   local v
   case "${1:-}" in on) v=true ;; off) v=false ;; *) die "usage: hypervi alt-tab on|off" ;; esac
-  [ -f "$inc" ] || die "no $inc: run hypervi setup first"
-  grep -qE '^local alt_tab = (true|false)' "$inc" || die "$inc has no 'local alt_tab = true|false' line (edited by hand?)"
-  local body; body=$(mktemp)
-  sed -E "s/^local alt_tab = (true|false)/local alt_tab = $v/" "$inc" >"$body"
-  replace "$inc" "$body"; rm -f "$body"
-  if grep -q 'hl.unbind("ALT + TAB")' "$inc"; then say "ALT + TAB: $([ $v = true ] && echo HyperVi || echo Omarchy). Apply with: hyprctl reload"
-  else say "alt_tab set, but $inc predates the option: run hypervi remove and hypervi setup to regenerate it"; fi
+  set_alt_tab "$v"
+  say "ALT + TAB: $([ $v = true ] && echo HyperVi || echo Omarchy). Apply with: hyprctl reload (or use the switch in kwinish-ui settings)"
 }
 
 cmd_refresh() {

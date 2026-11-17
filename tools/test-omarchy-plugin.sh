@@ -182,22 +182,32 @@ for used in CTRL+SHIFT+SUPER+LEFT CTRL+SHIFT+SUPER+A CTRL+SHIFT+SUPER+D CTRL+SHI
   grep -q "=$used\$" "$t/binds" && bad "a HyperVi bind lands on Omarchy's $used"
 done
 ok "no HyperVi bind on the Omarchy combos checked"
-grep -qE '^local alt_tab = false' "$inc" 2>/dev/null && ok "hypervi.lua: Alt+Tab off by default (Omarchy binds ALT + Tab)" || bad "hypervi.lua: Alt+Tab must default to off"
-# Alt+Tab: off by default; --alt-tab, or `alt-tab on|off` later, hands ALT + TAB to the HyperVi switcher
-grep -qE '^local alt_tab = false' "$inc" 2>/dev/null && ok "default: alt_tab = false" || bad "default must be alt_tab = false"
-seed alt
+# Alt+Tab: one switch, "alt_tab" in ~/.config/kwinish/settings.json (also the settings window's); hypervi.lua's line is the
+# fallback when the key is missing. On: HyperVi's switcher and Omarchy's ALT + TAB pair unbound; off: nothing touched.
+eff() { HOME=$t/home-$1 XDG_CONFIG_HOME=$t/home-$1/.config lua "$root/tools/testdata/omarchy-binds.lua" "$t/home-$1/.config/hypr/hypervi.lua" "$root/core" 2>&1 | grep '^alt_tab='; }
+sj() { cat "$t/home-$1/.config/kwinish/settings.json" 2>/dev/null; }
+[ "$(eff new)" = "alt_tab=false unbind=" ] && jq -e '.alt_tab == false' <<<"$(sj new)" >/dev/null 2>&1 && ok "setup: Alt+Tab left to Omarchy, alt_tab=false in settings.json" \
+  || bad "setup default: $(eff new) / $(sj new)"
+seed alt; mkdir -p "$t/home-alt/.config/kwinish"; echo '{"bar_height": 30}' >"$t/home-alt/.config/kwinish/settings.json"
 run alt 0.57.2 0.57.2 setup --alt-tab; rc=$?
 ia=$t/home-alt/.config/hypr/hypervi.lua
-[ "$rc" = 0 ] && grep -qE '^local alt_tab = true' "$ia" && ok "setup --alt-tab: alt_tab = true" || bad "setup --alt-tab (exit $rc): $(cat "$t/out-alt")"
-grep -qF 'hl.unbind("ALT + TAB")' "$ia" && grep -qF 'hl.unbind("ALT + SHIFT + TAB")' "$ia" && ok "hypervi.lua: unbinds Omarchy's ALT + TAB pair when alt_tab is on" \
-  || bad "hypervi.lua: must unbind ALT + TAB and ALT + SHIFT + TAB"
+[ "$rc" = 0 ] && [ "$(eff alt)" = "alt_tab=true unbind=ALT + TAB,ALT + SHIFT + TAB" ] && ok "setup --alt-tab: HyperVi switcher, Omarchy's pair unbound" \
+  || bad "setup --alt-tab (exit $rc): $(eff alt) $(cat "$t/out-alt")"
+jq -e '.alt_tab == true and .bar_height == 30' <<<"$(sj alt)" >/dev/null 2>&1 && ok "setup --alt-tab: settings.json keeps the other keys" || bad "settings.json after setup --alt-tab: $(sj alt)"
 run alt 0.57.2 0.57.2 alt-tab off; rc=$?
-[ "$rc" = 0 ] && grep -qE '^local alt_tab = false' "$ia" && ok "alt-tab off" || bad "alt-tab off (exit $rc): $(cat "$t/out-alt")"
-ls "$t/home-alt/.config/hypr"/.hypervi.lua.* >/dev/null 2>&1 && bad "alt-tab: left a temporary file" || ok "alt-tab: written by temporary + rename"
+[ "$rc" = 0 ] && [ "$(eff alt)" = "alt_tab=false unbind=" ] && jq -e '.alt_tab == false and .bar_height == 30' <<<"$(sj alt)" >/dev/null 2>&1 && ok "alt-tab off" || bad "alt-tab off (exit $rc): $(eff alt) $(sj alt)"
+ls "$t/home-alt/.config/kwinish"/.settings.json.* >/dev/null 2>&1 && bad "alt-tab: left a temporary file" || ok "alt-tab: settings.json written by temporary + rename"
 run alt 0.57.2 0.57.2 alt-tab on; rc=$?
-[ "$rc" = 0 ] && grep -qE '^local alt_tab = true' "$ia" && HV_F="$ia" lua -e 'assert(loadfile(os.getenv("HV_F")))' 2>/dev/null && ok "alt-tab on (still valid Lua)" || bad "alt-tab on (exit $rc)"
+[ "$rc" = 0 ] && [ "$(eff alt)" = "alt_tab=true unbind=ALT + TAB,ALT + SHIFT + TAB" ] && ok "alt-tab on" || bad "alt-tab on (exit $rc): $(eff alt)"
 run alt 0.57.2 0.57.2 alt-tab off; run alt 0.57.2 0.57.2 setup --alt-tab; rc=$?
-[ "$rc" = 0 ] && grep -qE '^local alt_tab = true' "$ia" && ok "setup --alt-tab on an existing hypervi.lua turns it on" || bad "setup --alt-tab kept alt_tab off in an existing hypervi.lua"
+[ "$rc" = 0 ] && [ "$(eff alt)" = "alt_tab=true unbind=ALT + TAB,ALT + SHIFT + TAB" ] && ok "setup --alt-tab on an existing install turns it on" || bad "setup --alt-tab on existing: $(eff alt)"
+rm "$t/home-alt/.config/kwinish/settings.json"
+[ "$(eff alt)" = "alt_tab=true unbind=ALT + TAB,ALT + SHIFT + TAB" ] && ok "no settings.json: hypervi.lua's fallback (written true by setup --alt-tab)" || bad "fallback without settings.json: $(eff alt)"
+echo 'not json' >"$t/home-alt/.config/kwinish/settings.json"
+run alt 0.57.2 0.57.2 alt-tab on; rc=$?
+[ "$rc" != 0 ] && [ "$(cat "$t/home-alt/.config/kwinish/settings.json")" = "not json" ] && ok "alt-tab refuses to overwrite a settings.json it cannot read" || bad "alt-tab on a broken settings.json (exit $rc)"
+[ "$(eff alt)" = "alt_tab=true unbind=ALT + TAB,ALT + SHIFT + TAB" ] && ok "broken settings.json: hypervi.lua's fallback" || bad "broken settings.json: $(eff alt)"
+rm "$t/home-alt/.config/kwinish/settings.json"; run alt 0.57.2 0.57.2 alt-tab on
 # refresh: rewrites an unedited hypervi.lua with the current generator, keeping alt_tab; refuses an edited one
 printf -- '-- old generator\nlocal alt_tab = true\n' >"$ia"; sha256sum "$ia" | cut -d' ' -f1 >"$t/home-alt/.local/share/hypervi/hypervi.lua.sha256"
 run alt 0.57.2 0.57.2 refresh; rc=$?

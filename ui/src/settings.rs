@@ -43,6 +43,7 @@ const ROWS: &[(&str, &str, &str, Kind)] = &[
     ("snap_top_edge", "Maximize when dropped on the top edge", "Maximizar ao soltar na borda de cima", Kind::Bool(true)),
     ("snap_preview", "Show where the window will land", "Mostrar onde a janela vai encaixar", Kind::Bool(true)),
     ("snap_assist", "Snap Assist (offer the other windows for the next zone)", "Snap Assist (oferecer as outras janelas para a próxima zona)", Kind::Bool(true)),
+    ("alt_tab", "Alt+Tab opens the HyperVi switcher (off: the desktop's own; applied by a config reload)", "Alt+Tab abre o seletor do HyperVi (desligado: o do desktop; aplicado com uma recarga)", Kind::Bool(true)),
     ("seam_resistance", "Push needed to cross to the next monitor (px, 0 = off)", "Empurrão para passar ao outro monitor (px, 0 = desliga)", Kind::Int(0, 2000, 200)),
 ];
 
@@ -66,7 +67,7 @@ pub fn rgba_to_argb(s: &str) -> Option<u32> {
 
 /// The value the compositor holds now (from the user's config, an earlier save, or the default), or None without the plugin.
 fn live(key: &str) -> Option<Value> {
-    if key == "snap_assist" { return None; } // core-only, not a compositor option
+    if key == "snap_assist" || key == "alt_tab" { return None; } // core-only, not compositor options
     let out = Command::new("hyprctl").args(["getoption", &format!("plugin:kwinish:{key}"), "-j"]).output().ok()?;
     let v: Value = serde_json::from_slice(&out.stdout).ok()?;
     v.get("int").or_else(|| v.get("str")).cloned()
@@ -80,6 +81,7 @@ fn load() -> Map<String, Value> {
 /// Lua that applies one change now: through the core's apply_settings when it has it, else straight to the compositor (an older
 /// core, e.g. the installed one before the package is updated, has no apply_settings and would make the change wait for a reload).
 pub fn live_code(key: &str, v: &Value) -> Option<String> {
+    if needs_reload(key) { return None; }
     let lit = match v {
         Value::Bool(b) => b.to_string(),
         Value::Number(n) if n.is_i64() => n.to_string(),
@@ -91,6 +93,9 @@ pub fn live_code(key: &str, v: &Value) -> Option<String> {
     Some(format!("local k=package.loaded.kwinish; if k and k.apply_settings then k.apply_settings() else {direct} end"))
 }
 
+/// Keys that change a bind: no in-place change exists, so saving one reloads the config (hypervi.lua reads alt_tab there).
+pub fn needs_reload(key: &str) -> bool { key == "alt_tab" }
+
 fn save(key: &str, v: Value) {
     let code = live_code(key, &v);
     let mut map = load();
@@ -101,6 +106,7 @@ fn save(key: &str, v: Value) {
         return;
     }
     if let Some(code) = code { let _ = Command::new("hyprctl").args(["eval", &code]).spawn(); }
+    if needs_reload(key) { let _ = Command::new("hyprctl").arg("reload").spawn(); }
 }
 
 pub fn run() -> glib::ExitCode {
@@ -213,5 +219,12 @@ mod tests {
         assert!(live_code("bar_color", &Value::from("rgba(26262ef7)")).unwrap().contains("['bar_color']='rgba(26262ef7)'"));
         assert!(live_code("snap_assist", &Value::Bool(false)).unwrap().contains("k.snap_assist=false"));
         assert!(live_code("bar_text_font", &Value::from("x'); os.exit(")).is_none());
+    }
+    #[test]
+    fn alt_tab_is_a_row_and_applies_by_reload() {
+        assert!(ROWS.iter().any(|r| r.0 == "alt_tab" && matches!(r.3, Kind::Bool(true))));
+        assert!(live_code("alt_tab", &Value::Bool(false)).is_none(), "a bind cannot change in place");
+        assert!(needs_reload("alt_tab") && !needs_reload("snap_assist"));
+        assert!(live("alt_tab").is_none(), "core-only, not a compositor option");
     }
 }
