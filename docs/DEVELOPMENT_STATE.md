@@ -1,3 +1,9 @@
+## Publicação pendente — 17/11/2026
+
+Implementação e validação commitadas em d989e44, branch omarchy-plugin-0.57.2. Push normal HTTPS falhou: Git não tem credencial e gh auth status confirma ausência de login local. Acesso SSH não prosseguiu porque a chave do host github.com não está em known_hosts; nenhuma verificação foi desativada. Conector GitHub confirma a conta lhenr1que, mas não fornece transporte Git local. Não houve publicação nem merge.
+
+Única ação para desbloquear: dono executar gh auth login no terminal. Depois retomar git push -u origin omarchy-plugin-0.57.2 e comparar o SHA remoto com HEAD. Autorização de push já concedida; não pedir novamente. Não alterar origin ou nome do repositório sem pedido.
+
 ## Entrega — instalação portátil e publicação autorizada, 17/11/2026
 
 Pedido do dono: push GitHub, estrutura padronizada, plugin Omarchy e possibilidade de instalação em outras distros Hyprland. Mantida a estrutura de workspace já implantada (zonari-core, zonari-ui, zonari-bars, zonari-bars-0.56, omarchy, resources, scripts, tests, docs).
