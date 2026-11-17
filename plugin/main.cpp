@@ -40,9 +40,12 @@ APICALL EXPORT std::string PLUGIN_API_VERSION() {
     return HYPRLAND_API_VERSION;
 }
 
+// Only our own bar counts: Omarchy's titlebars (a hyprbars fork named "Hyprbar") attach to every window and draw on
+// floating-workspace windows only, so giving way to a Hyprbar left every window without a HyperVi bar. A visible
+// hyprbars is turned off by the config instead (omarchy/hypervi writes plugin.hyprbars.enabled = false).
 static void onNewWindow(PHLWINDOW window) {
     if (!window->backend().traits().suggestsNoBorder) {
-        if (std::ranges::any_of(window->presentation().decorations(), [](const auto& d) { return d->getDisplayName() == "Hyprbar" || d->getDisplayName() == "KwinishBar"; }))
+        if (std::ranges::any_of(window->presentation().decorations(), [](const auto& d) { return d->getDisplayName() == "KwinishBar"; }))
             return;
 
         auto bar    = makeShared<CHyprBar>(window);

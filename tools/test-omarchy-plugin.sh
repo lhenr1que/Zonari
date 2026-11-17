@@ -198,6 +198,7 @@ run new 0.57.2 0.57.2 status --json
 jq -e '.abi_ok == false' "$t/out-new" >/dev/null 2>&1 && ok "status: ABI mismatch after a Hyprland update" || bad "status: ABI change not seen: $(cat "$t/out-new")"
 printf '%s\n' "$FAKE_SAVE" >"$t/prefix/include/hyprland/src/version.h"
 
+cp "$inc" "$inc.keep" 2>/dev/null
 run new 0.57.2 0.57.2 remove; rc=$?
 if [ "$rc" = 0 ] && [ "$(cat "$h/.config/hypr/hyprland.lua")" = "$orig" ] && [ ! -e "$inc" ] && [ ! -e "$h/.local/bin/kwinish-ui" ] \
   && [ ! -e "$h/.local/share/hypervi" ]; then ok "remove: hyprland.lua back as it was, files gone"
@@ -219,6 +220,17 @@ grep -q 'status' "$w" 2>/dev/null && grep -q -- '--json' "$w" && ok "bar widget 
 # a file named like a qs.Ui type shadows it in its own directory: BarWidget.qml using BarWidget instantiates itself
 case $(basename "$w" .qml) in BarWidget | BarIconButton | WidgetButton) bad "bar widget file shadows the qs.Ui type $(basename "$w" .qml)" ;; *) ok "bar widget file does not shadow a qs.Ui type" ;; esac
 grep -qE '^\s*property var state\b' "$w" && bad "bar widget redefines Item.state" || ok "bar widget does not redefine Item.state"
+
+# 3c. coexisting with Omarchy's titlebars (omarchy-hyprland-titlebars: a hyprbars fork named "Hyprbar", attached to every
+# window and drawn only on floating-workspace windows): the HyperVi bar must not skip a window for a Hyprbar, and
+# hypervi.lua turns Omarchy's bar off so a window never gets two
+for tree in plugin plugin-0.56; do
+  body=$(sed -n '/^static void onNewWindow/,/^}/p' "$root/$tree/main.cpp")
+  grep -q '"KwinishBar"' <<<"$body" && ok "$tree: onNewWindow skips a window that already has a KwinishBar" || bad "$tree: onNewWindow must skip its own KwinishBar"
+  grep -q '"Hyprbar"' <<<"$body" && bad "$tree: onNewWindow skips windows with a Hyprbar (Omarchy attaches one to every window)" || ok "$tree: onNewWindow does not give way to a Hyprbar"
+done
+grep -qF 'if hl.plugin and hl.plugin.hyprbars then' "$inc.keep" 2>/dev/null && grep -qF 'hyprbars = { enabled = false }' "$inc.keep" \
+  && ok "hypervi.lua: turns Omarchy's titlebars off when they are loaded" || bad "hypervi.lua: must set plugin.hyprbars.enabled = false when hl.plugin.hyprbars exists"
 
 # 4. PKGBUILDs
 for p in packaging/PKGBUILD packaging/plugin/PKGBUILD; do

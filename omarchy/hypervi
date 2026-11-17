@@ -85,6 +85,8 @@ local load_plugin = true -- the title bars; after a Hyprland update run: $root/o
 package.path = "$root/core/?.lua;" .. package.path
 if load_plugin and hl.plugin and hl.plugin.load then
   hl.plugin.load("$share/kwinish-bars.so")
+  -- Omarchy's floating-workspace titlebars (a hyprbars fork) would draw a second bar; this file loads after Omarchy's
+  if hl.plugin and hl.plugin.hyprbars then hl.config({ plugin = { hyprbars = { enabled = false } } }) end
 end
 
 local kw = require("kwinish")

@@ -110,13 +110,16 @@ ok - omarchy/hypervi is executable
 ok - status --json: 0.55.0 is not compatible
 ok - setup refuses Hyprland 0.55.0 and writes nothing
 ok - setup on 0.56.2 succeeds
+ok - setup on 0.56.2: plugin really built
+ok - status: an empty kwinish-bars.so is not built
+ok - rebuild replaces an empty plugin
 ok - setup on 0.56.2 builds plugin-0.56/
 ok - status on 0.56.2: compatible, plugin line 0.56
 ok - plugin-0.56/ has the sources
 ok - plugin-0.56/ registers the same hl.plugin.kwinish functions
 ok - setup refuses headers that differ from the running Hyprland
 ok - setup on 0.57.2 succeeds
-ok - setup: plugin built into ~/.local/share/hypervi
+ok - setup: plugin built into ~/.local/share/hypervi (an ELF, not an empty file)
 ok - setup: ABI receipt written
 ok - setup: kwinish-ui installed on ~/.local/bin
 ok - setup: kwinish-ui is a copy, not a link
@@ -146,6 +149,11 @@ ok - setup refuses without ~/.config/hypr/hyprland.lua
 ok - bar widget reads hypervi status --json
 ok - bar widget file does not shadow a qs.Ui type
 ok - bar widget does not redefine Item.state
+ok - plugin: onNewWindow skips a window that already has a KwinishBar
+ok - plugin: onNewWindow does not give way to a Hyprbar
+ok - plugin-0.56: onNewWindow skips a window that already has a KwinishBar
+ok - plugin-0.56: onNewWindow does not give way to a Hyprbar
+ok - hypervi.lua: turns Omarchy's titlebars off when they are loaded
 ok - packaging/PKGBUILD: depends on hyprland>=0.57
 ok - packaging/plugin/PKGBUILD: depends on hyprland>=0.57
 test-omarchy-plugin: tudo passou
@@ -460,38 +468,16 @@ ok - above the bar when there is no room below
 ok - wider than the monitor: starts at its left edge, top kept
 == tools: 12 arquivo(s)
 == Rust
-   Compiling glib-sys v0.22.9
-   Compiling gobject-sys v0.22.9
-   Compiling gio-sys v0.22.9
-   Compiling cairo-sys-rs v0.22.9
-   Compiling gdk-pixbuf-sys v0.22.9
-   Compiling pango-sys v0.22.9
-   Compiling graphene-sys v0.22.9
-   Compiling gdk4-sys v0.11.5
-   Compiling gsk4-sys v0.11.5
-   Compiling gtk4-sys v0.11.5
-   Compiling gtk4-layer-shell-sys v0.6.1
-   Compiling glib v0.22.10
-   Compiling gio v0.22.10
-   Compiling cairo-rs v0.22.9
-   Compiling graphene-rs v0.22.8
-   Compiling pango v0.22.9
-   Compiling gdk-pixbuf v0.22.0
-   Compiling gdk4 v0.11.5
-   Compiling gsk4 v0.11.5
-   Compiling gtk4 v0.11.5
-   Compiling gtk4-layer-shell v0.8.1
-   Compiling kwinish-ui v0.1.0 (/home/lh/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/HyperVi/ui)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 31.58s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
      Running unittests src/main.rs (ui/target/debug/deps/kwinish_ui-dcd064271de70c43)
 
 running 35 tests
 test assist::choice_tests::pick_is_revalidated_by_the_core ... ok
+test assist::choice_tests::rejects_replaced_generation_and_missing_window ... ok
 test bars::tests::colour_parse ... ok
+test bars::tests::curve_runs_from_left_edge_to_top_edge ... ok
 test bars::tests::gaps ... ok
 test bars::tests::rect_hits ... ok
-test bars::tests::curve_runs_from_left_edge_to_top_edge ... ok
-test assist::choice_tests::rejects_replaced_generation_and_missing_window ... ok
 test bars::tests::socket_reply_rejects_stalled_and_oversized ... ok
 test menu::tests::marks_follow_the_core ... ok
 test mode::tests::modes ... ok
@@ -501,21 +487,21 @@ test settings::tests::live_code_is_plain_lua ... ok
 test shortcut::tests::combos ... ok
 test shortcut::tests::conflict_check ... ok
 test menu::tests::move_and_resize_in_alpha1 ... ok
-test zones::tests::a_failed_rename_leaves_the_old_file ... ok
 test zones::tests::a_failed_backup_stops_the_save ... ok
+test zones::tests::a_failed_rename_leaves_the_old_file ... ok
 test zones::tests::edges_and_moving ... ok
 test zones::tests::an_unreadable_file_stops_the_save ... ok
-test zones::tests::floating_block_delete_just_removes ... ok
 test zones::tests::a_file_that_is_not_text_is_kept_too ... ok
-test zones::tests::file_roundtrip_and_slug ... ok
+test zones::tests::floating_block_delete_just_removes ... ok
 test zones::tests::atomic_write_keeps_a_backup_of_an_unreadable_file ... ok
+test zones::tests::file_roundtrip_and_slug ... ok
 test zones::tests::parse_drops_what_the_core_would_reject ... ok
 test zones::tests::split_and_delete_roundtrip ... ok
 test zones::tests::layout_cases_agree_with_the_core ... ok
 test zones::tests::text_the_reader_refuses_is_never_written ... ok
 test zones::tests::valid_files_as_written_are_read_back ... ok
-test zones::tests::whitespace_is_kept_an_empty_file_is_not ... ok
 test bars::tests::socket_reply_rejects_oversized ... ok
+test zones::tests::whitespace_is_kept_an_empty_file_is_not ... ok
 test assist::tests::parses_core_state ... ok
 test zones::tests::parse_refuses_what_the_core_refuses ... ok
 test zones::tests::a_file_the_reader_refuses_is_backed_up_before_saving ... ok
@@ -527,10 +513,10 @@ test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
 == plugin: plugin-0.56
 make: Entrando no diretório '/home/lh/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/HyperVi/plugin-0.56'
 
-g++ -O2 -shared -fPIC -std=c++2b -Wno-c++11-narrowing  --no-gnu-unique `pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon cairo librsvg-2.0` main.cpp barDeco.cpp BarPassElement.cpp PreviewPassElement.cpp icon.cpp  -o /tmp/kwinish-check.edSmP4sv/kwinish-bars.so `pkg-config --libs cairo librsvg-2.0`
+g++ -O2 -shared -fPIC -std=c++2b -Wno-c++11-narrowing  --no-gnu-unique `pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon cairo librsvg-2.0` main.cpp barDeco.cpp BarPassElement.cpp PreviewPassElement.cpp icon.cpp  -o /tmp/kwinish-check.RbDNO14o/kwinish-bars.so `pkg-config --libs cairo librsvg-2.0`
 main.cpp: In function ‘PLUGIN_DESCRIPTION_INFO pluginInit(void*)’:
-main.cpp:436:38: warning: ‘bool HyprlandAPI::addConfigKeyword(void*, const std::string&, Hyprlang::PCONFIGHANDLERFUNC, Hyprlang::SHandlerOptions)’ is deprecated [-Wdeprecated-declarations]
-  436 |         HyprlandAPI::addConfigKeyword(PHANDLE, "plugin:kwinish:button", onNewButton, Hyprlang::SHandlerOptions{});
+main.cpp:439:38: warning: ‘bool HyprlandAPI::addConfigKeyword(void*, const std::string&, Hyprlang::PCONFIGHANDLERFUNC, Hyprlang::SHandlerOptions)’ is deprecated [-Wdeprecated-declarations]
+  439 |         HyprlandAPI::addConfigKeyword(PHANDLE, "plugin:kwinish:button", onNewButton, Hyprlang::SHandlerOptions{});
       |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In file included from globals.hpp:8,
                  from barDeco.hpp:16,
