@@ -1,3 +1,13 @@
+## Entrega — instalação portátil e publicação autorizada, 17/11/2026
+
+Pedido do dono: push GitHub, estrutura padronizada, plugin Omarchy e possibilidade de instalação em outras distros Hyprland. Mantida a estrutura de workspace já implantada (zonari-core, zonari-ui, zonari-bars, zonari-bars-0.56, omarchy, resources, scripts, tests, docs).
+
+Implementado scripts/install.sh: prefixo configurável, build sem Omarchy, instalação de núcleo/UI/barras/ABI/licenças/exemplo Lua, sem alterar configuração nem sessão. Seleciona 0.56.2 ou 0.57.x e recusa versões não previstas. Alt+Tab opcional no exemplo. Rebuild e remoção manual documentados em docs/INSTALL.md. PKGBUILDs corrigidos para workspace raiz, diretório zonari-bars e output target/release. URLs apontam para o remoto real HyperVi na branch de desenvolvimento; não renomear GitHub sem pedido.
+
+Validação: regressão instalador vermelho antes, verde depois; duas regressões de caminhos de pacote vermelho antes, verde depois. scripts/check.sh completo passou (37 testes Rust), build e instalação real em /tmp/zonari-portable-validation-20261117 contra Hyprland 0.56.2 passaram; exemplo Lua passou em luac -p. Evidências em docs/installation/evidence/. Instalação em outras distros e pacote Arch completo não testados. Nenhum plugin foi carregado/descarregado nesta entrega.
+
+Git: branch omarchy-plugin-0.57.2; push explicitamente autorizado pelo dono nesta sessão. Próximo passo operacional desta entrega: commit, push normal e comparar SHA remoto. Não há autorização implícita para merge/main, PR, renomear remoto, publicar AUR ou mudar sessão. Teste após novo login permanece pendente. OpenSpec portable-source-install registra escopo implementado; add-omarchy-plugin permanece ativo.
+
 ## Encerramento da continuação — Zonari, 17/11/2026
 
 Renomeação commitada em 2673e87; correção adicional do cabeçalho AGENTS e evidências em commit posterior. Build completo passou (docs/omarchy-plugin/evidence/zonari-check.txt); teste de migração vermelho/verde preservado no mesmo diretório.

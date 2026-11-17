@@ -1,0 +1,43 @@
+    Finished `release` profile [optimized] target(s) in 0.05s
+make: Entering directory '/home/lh/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/Zonari/zonari-bars-0.56'
+g++ -O2 -shared -fPIC -std=c++2b -Wno-c++11-narrowing  --no-gnu-unique `pkg-config --cflags pixman-1 libdrm hyprland libinput libudev wayland-server xkbcommon cairo librsvg-2.0` main.cpp barDeco.cpp BarPassElement.cpp PreviewPassElement.cpp icon.cpp  -o /tmp/tmp.cZv9LjHaZF/zonari-bars.so `pkg-config --libs cairo librsvg-2.0`
+main.cpp: In function ‘PLUGIN_DESCRIPTION_INFO pluginInit(void*)’:
+main.cpp:439:38: warning: ‘bool HyprlandAPI::addConfigKeyword(void*, const std::string&, Hyprlang::PCONFIGHANDLERFUNC, Hyprlang::SHandlerOptions)’ is deprecated [-Wdeprecated-declarations]
+  439 |         HyprlandAPI::addConfigKeyword(PHANDLE, "plugin:zonari:button", onNewButton, Hyprlang::SHandlerOptions{});
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from globals.hpp:8,
+                 from barDeco.hpp:16,
+                 from main.cpp:24:
+/usr/include/hyprland/src/plugins/PluginAPI.hpp:151:33: note: declared here
+  151 |     APICALL [[deprecated]] bool addConfigKeyword(HANDLE handle, const std::string& name, Hyprlang::PCONFIGHANDLERFUNC fn, Hyprlang::SHandlerOptions opts);
+      |                                 ^~~~~~~~~~~~~~~~
+At global scope:
+cc1plus: note: unrecognized command-line option ‘-Wno-c++11-narrowing’ may have been intended to silence earlier diagnostics
+barDeco.cpp: In member function ‘virtual SDecorationPositioningInfo CHyprBar::getPositioningInfo()’:
+barDeco.cpp:87:57: warning: narrowing conversion of ‘(((!((CHyprBar*)this)->CHyprBar::barActive()) || (!(bool)ENABLED)) ? 0 : ((long int)HEIGHT))’ from ‘long int’ to ‘int’ [-Wnarrowing]
+   87 |     info.desiredExtents = {{0, !barActive() || !ENABLED ? 0 : HEIGHT}, {0, 0}};
+      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~
+barDeco.cpp: In member function ‘void CHyprBar::renderPass(PHLMONITOR, const float&)’:
+barDeco.cpp:1010:24: warning: narrowing conversion of ‘(long int)HEIGHT’ from ‘long int’ to ‘int’ [-Wnarrowing]
+ 1010 |     m_seExtents = {{0, HEIGHT}, {}};
+      |                        ^~~~~~
+barDeco.cpp:1048:80: warning: narrowing conversion of ‘(float)scaledRounding’ from ‘float’ to ‘int’ [-Wnarrowing]
+ 1048 |         g_pHyprOpenGL->renderRect(windowBox, CHyprColor(0, 0, 0, 0), {.round = scaledRounding, .roundingPower = m_pWindow->roundingPower()});
+      |                                                                                ^~~~~~~~~~~~~~
+barDeco.cpp:1056:65: warning: narrowing conversion of ‘(float)scaledRounding’ from ‘float’ to ‘int’ [-Wnarrowing]
+ 1056 |         g_pHyprOpenGL->renderRect(titleBarBox, color, {.round = scaledRounding, .roundingPower = m_pWindow->roundingPower(), .blur = true, .blurA = a});
+      |                                                                 ^~~~~~~~~~~~~~
+barDeco.cpp:1058:65: warning: narrowing conversion of ‘(float)scaledRounding’ from ‘float’ to ‘int’ [-Wnarrowing]
+ 1058 |         g_pHyprOpenGL->renderRect(titleBarBox, color, {.round = scaledRounding, .roundingPower = m_pWindow->roundingPower()});
+      |                                                                 ^~~~~~~~~~~~~~
+barDeco.cpp:1075:51: warning: narrowing conversion of ‘(int)(double)BARBUF.Hyprutils::Math::Vector2D::x’ from ‘int’ to ‘double’ [-Wnarrowing]
+ 1075 |     CBox textBox = {titleBarBox.x, titleBarBox.y, (int)BARBUF.x, (int)BARBUF.y};
+      |                                                   ^~~~~~~~~~~~~
+barDeco.cpp:1075:66: warning: narrowing conversion of ‘(int)(double)BARBUF.Hyprutils::Math::Vector2D::y’ from ‘int’ to ‘double’ [-Wnarrowing]
+ 1075 |     CBox textBox = {titleBarBox.x, titleBarBox.y, (int)BARBUF.x, (int)BARBUF.y};
+      |                                                                  ^~~~~~~~~~~~~
+At global scope:
+cc1plus: note: unrecognized command-line option ‘-Wno-c++11-narrowing’ may have been intended to silence earlier diagnostics
+make: Leaving directory '/home/lh/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/Zonari/zonari-bars-0.56'
+Installed for Hyprland 0.56.2 under /tmp/zonari-portable-validation-20261117. Config and session unchanged.
+Review /tmp/zonari-portable-validation-20261117/share/zonari/zonari.lua; see docs/INSTALL.md before loading.

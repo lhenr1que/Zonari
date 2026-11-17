@@ -31,3 +31,5 @@ O [registro das decisões](product/DECISIONS.md) separa aprovação, implementa�
 Atualize a documentação técnica quando uma mudança de código alterar seu contrato ou suas opções. Registre data, commit e tipo de validação. Atualize produto somente com decisão explícita e preserve o ID e a proveniência. Mudanças de comportamento seguem o OpenSpec e as regras do [AGENTS](../AGENTS.md).
 
 Os arquivos [API](API.md) e [CONFIGURAVEL](CONFIGURAVEL.md) mantêm seus caminhos para preservar referências do OpenSpec. O [apontador HANDOFF](HANDOFF.md) preserva referências históricas. Antes de mover outra fonte, confira suas referências e registre a correspondência no manifesto.
+
+- [Instalação Omarchy e outras distros Hyprland](INSTALL.md): estrutura, dependências, ativação e remoção.

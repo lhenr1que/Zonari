@@ -1,0 +1,4 @@
+- [x] Regression tests fail for missing installer and two stale package build paths.
+- [x] Implement independent source installer and repair package paths.
+- [x] Document dependencies, activation, rebuild, removal and validation limits.
+- [x] Full check and actual source build in temporary installation prefix.

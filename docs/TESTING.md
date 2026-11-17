@@ -10,7 +10,7 @@ Roda, nesta ordem, e continua depois de uma falha para mostrar todas:
 1. cada `zonari-core/test_*.lua` com `lua` (Lua 5.5, a que o Hyprland instalado usa: `readelf -d /usr/bin/Hyprland` mostra `liblua.so.5.5`);
 2. cada `tests/test-*.sh` (os testes do próprio executor, do isolamento das suítes e do `live-backup.sh`);
 3. `cargo test --locked --manifest-path zonari-ui/Cargo.toml`;
-4. `make -C plugin` com saída num diretório temporário.
+4. `make -C zonari-bars` (ou `zonari-bars-0.56` nos cabeçalhos 0.56.x) com saída num diretório temporário.
 
 Código de saída: **0** tudo passou; **1** alguma falha, ferramenta ausente ou nenhum teste encontrado numa etapa; **2** uso errado. Ferramenta ausente é falha, nunca etapa pulada. Com os caches do cargo prontos, leva uns 20 s (13 s são do plugin).
 

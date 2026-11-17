@@ -5,14 +5,14 @@ pkgver=0.0.0.r125.60e8e18
 pkgrel=1
 pkgdesc='Zonari: KWin-style window management for Hyprland 0.57 (Lua core, GTK4 layer-shell UI)'
 arch=('x86_64')
-url='https://github.com/lhenr1que/Zonari'
+url='https://github.com/lhenr1que/HyperVi'
 license=('MIT')
 depends=('hyprland>=0.57' 'gtk4' 'gtk4-layer-shell')
 makedepends=('git' 'cargo')
 checkdepends=('lua')
 provides=('zonari')
 conflicts=('zonari')
-source=("zonari::git+file://${ZONARI_SRC:-$PWD/..}")
+source=("zonari::git+${ZONARI_SRC:+file://}${ZONARI_SRC:-https://github.com/lhenr1que/HyperVi.git}#branch=omarchy-plugin-0.57.2")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -21,7 +21,7 @@ pkgver() {
 }
 
 build() {
-  cd zonari/ui
+  cd zonari
   cargo build --release --locked
 }
 
@@ -32,7 +32,7 @@ check() {
 
 package() {
   cd zonari
-  install -Dm755 zonari-ui/target/release/zonari-ui "$pkgdir/usr/bin/zonari-ui"
+  install -Dm755 target/release/zonari-ui "$pkgdir/usr/bin/zonari-ui"
   install -d "$pkgdir/usr/share/zonari/core" "$pkgdir/usr/share/zonari/recipes"
   install -m644 zonari-core/{zonari,geometry,binds,switcher,layouts,rules,modes,assist,settings,kwjson}.lua "$pkgdir/usr/share/zonari/core/"
   install -m644 resources/recipes/*.lua "$pkgdir/usr/share/zonari/recipes/"

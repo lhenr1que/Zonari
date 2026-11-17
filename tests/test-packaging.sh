@@ -49,7 +49,7 @@ else
 fi
 
 # 2b. resources/packaging/PKGBUILD package(): every core module (not the tests) is shipped
-mkdir -p "$t/pkgcore" "$t/src/zonari/zonari-ui/target/release"; : > "$t/src/zonari/zonari-ui/target/release/zonari-ui"
+mkdir -p "$t/pkgcore" "$t/src/zonari/target/release"; : > "$t/src/zonari/target/release/zonari-ui"
 if (cd "$t/src" && srcdir=$PWD pkgdir=$t/pkgcore bash -euc 'source "$1"; package' _ "$root/resources/packaging/PKGBUILD") >"$t/pkgcore.log" 2>&1; then
   missing=()
   for m in "$root"/zonari-core/*.lua; do
@@ -60,6 +60,21 @@ if (cd "$t/src" && srcdir=$PWD pkgdir=$t/pkgcore bash -euc 'source "$1"; package
 else
   bad "PKGBUILD (core): package() failed:"; sed 's/^/    /' "$t/pkgcore.log"
 fi
+
+# Build entry points must follow the Cargo workspace and renamed C++ directory.
+mkdir -p "$t/buildbin"
+cat > "$t/buildbin/cargo" <<'SH'
+#!/bin/sh
+test -f Cargo.toml && test -d zonari-ui
+SH
+cat > "$t/buildbin/make" <<'SH'
+#!/bin/sh
+test "$1" = -C && test -f "$2/Makefile"
+SH
+chmod +x "$t/buildbin/"*
+for recipe in resources/packaging/PKGBUILD resources/packaging/bars/PKGBUILD; do
+  (cd "$t/src" && PATH="$t/buildbin:$PATH" bash -euc 'source "$1"; build' _ "$root/$recipe") && ok "$recipe: build entry point exists" || bad "$recipe: stale build path"
+done
 
 # 3. zonari-bars-rebuild: an install that fails is reported as a failure
 mkdir -p "$t/fake" "$t/bin"

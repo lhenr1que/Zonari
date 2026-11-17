@@ -1,0 +1,14 @@
+ok - Makefile: plugin up to date when nothing changed
+ok - Makefile: a changed header rebuilds the plugin
+ok - PKGBUILD: package() runs
+ok - PKGBUILD: the rebuild sources include everything they need
+ok - PKGBUILD: no test sources shipped
+ok - PKGBUILD (core): every core module is shipped
+/home/lh/OpenBot/Agents/agent-92187588-cf65-424f-8168-40d4934c51f8/Zonari/resources/packaging/PKGBUILD: line 24: cd: zonari/ui: No such file or directory
+FALHOU - resources/packaging/PKGBUILD: stale build path
+FALHOU - resources/packaging/bars/PKGBUILD: stale build path
+ok - rebuild: a failed install of the plugin is reported as a failure
+ok - rebuild: never fails the pacman transaction
+ok - rebuild: a failed install of the ABI file is reported as a failure
+ok - rebuild: success when install works
+packaging: 2 falha(s)

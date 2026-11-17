@@ -11,7 +11,7 @@
 >
 > Dated records (`docs/history`, `docs/port-0-57`, `docs/STATUS.md`, `docs/DEVELOPMENT_STATE.md`, `openspec/`) keep the names of their time.
 
-KWin-style window management for **Hyprland 0.57** (Lua config). **Alpha**: used and tested live by its author on one machine; not yet packaged in any repository. The plugin is built against the exact Hyprland it runs on, so another Hyprland release needs a rebuild and may need code changes (the 0.56.2 line lives in the git history).
+KWin-style window management for **Hyprland 0.56.2 and 0.57.x** with Lua configuration. **Alpha**: live-tested on Omarchy/Arch 0.56.2; the 0.57.2 plugin has build validation. Other distributions can build from source when matching Hyprland APIs, headers and dependencies are available; they have not been tested. Native plugins must be rebuilt for the exact Hyprland build.
 
 Start with the [documentation index](docs/README.md), [implemented architecture](docs/ARCHITECTURE.md) and [current status](docs/STATUS.md). The [product documentation](docs/product/README.md) describes the future suite; approval of a product decision does not imply implementation.
 
@@ -43,30 +43,31 @@ A plugin is locked to one Hyprland build, so after a Hyprland update the plugin 
 in the plugin package rebuilds the plugin after `hyprland` changes; or run `sudo zonari-bars-rebuild`. Details in
 [plugin operations](docs/PLUGIN.md).
 
-## Omarchy
-Zonari is an Omarchy plugin for Hyprland 0.56.2 (Omarchy 4.5) and 0.57+. The core and UI are the same; on 0.56.x setup builds the frozen title-bar tree `zonari-bars-0.56/` (without the fixes made during the 0.57 port, see its README):
+## Install
+
+Full instructions, dependencies, activation, rebuild and removal: [installation guide](docs/INSTALL.md).
+
 ```sh
-omarchy plugin add https://github.com/lhenr1que/Zonari --enable   # clones to ~/.config/omarchy/plugins/zonari, adds the bar icon
-~/.config/omarchy/plugins/zonari/omarchy/zonari setup            # or click the bar icon; then: hyprctl reload
+git clone --branch omarchy-plugin-0.57.2 https://github.com/lhenr1que/HyperVi.git Zonari
+cd Zonari
 ```
-`setup` builds `zonari-ui` and the title-bar plugin into `~/.local/share/zonari`, writes `~/.config/hypr/zonari.lua` (yours to edit) and adds one `require("hypr.zonari")` line to `hyprland.lua` (backup next to it). Binds use `SUPER + CTRL + ALT`, free in Omarchy's defaults; Zonari's Alt+Tab is optional: setup asks, or `zonari setup --alt-tab`, or later `zonari alt-tab on|off` (it unbinds Omarchy's `ALT + TAB` pair). After a Hyprland update: `zonari rebuild` (the icon asks for it). Undo: `zonari remove`, then `omarchy plugin remove zonari`. Status: `zonari status`.
 
-## Try it
-> **The plugin alone is not enough.** Snap, the drag preview, Shift-drag zones, the window menu actions and every bind live in
-> the Lua core. If `require("zonari")` is not in your Hyprland config (step 1), dragging a bar only moves the window; the plugin
-> shows a one-time warning when it sees a drag with no core. Loading the core with `hyprctl eval` works for tests but is lost on
-> every config reload or restart.
+**Omarchy plugin:** the root `manifest.json` exposes a bar widget; setup selects the correct title-bar source and manages a generated Hyprland Lua module. Alt+Tab replacement is optional and can be disabled in settings.
 
-1. Core (required): copy or link `zonari-core/` to `~/.local/share/zonari/core`, add `resources/recipes/hyprland-snippet.lua` to your `hyprland.lua`
-   (check with `Hyprland --verify-config -c ~/.config/hypr/hyprland.lua`), optionally paste blocks from `resources/recipes/native.lua`.
-2. UI: `cargo build --release` in `zonari-ui/`, put `zonari-ui` on your `PATH`, start it from `exec-once` (Alt+Tab overlay) and
-   `zonari-ui bars` for the fallback bars.
-3. Plugin: `make -C zonari-bars abi`, then `hyprctl plugin load $PWD/zonari-bars/zonari-bars.so`. Turn off any other title-bar
-   plugin first (hyprbars). Loading a plugin can crash Hyprland if the plugin is wrong; keep a way to restart the session.
+```sh
+omarchy plugin add "$PWD" --enable
+~/.config/omarchy/plugins/zonari/omarchy/zonari setup
+hyprctl reload
+hyprctl configerrors
+```
 
-Packages (Arch, `makepkg` from a clone, nothing published to the AUR yet): `resources/packaging/PKGBUILD` (core and UI) and
-`resources/packaging/bars/PKGBUILD` (plugin, its sources, a rebuild script and a pacman hook that rebuilds it after `hyprland` updates).
-A real install, removal and upgrade have not been tested yet.
+**Other Hyprland distributions:** build and install without Omarchy. The installer leaves configuration and the running session untouched; follow the [activation instructions](docs/INSTALL.md) after reviewing the generated Lua example.
+
+```sh
+bash scripts/install.sh --prefix "$HOME/.local"
+```
+
+Both routes need headers matching the compositor and the Hyprland Lua API. On Omarchy, bindings use `SUPER + CTRL + ALT` (arrows for halves; U/I/J/K for corners). Independent installs use the defaults below; review conflicts first. Arch package recipes are in `resources/packaging/` and currently target 0.57+; no packages are published to AUR.
 
 Default binds with the default `mod = "SUPER"` ([table](zonari-core/binds.lua), installed by `resources/recipes/hyprland-snippet.lua`):
 `SUPER + ALT + arrows` halves/top/bottom; `SUPER + ALT + Q/W/A/S` corners; `SUPER + ALT + Return` maximize;

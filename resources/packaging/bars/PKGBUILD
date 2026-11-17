@@ -6,14 +6,14 @@ pkgver=0.0.0
 pkgrel=1
 pkgdesc='Zonari: KWin-style title bars for Hyprland (compositor plugin, fork of hyprbars) with a rebuild hook'
 arch=('x86_64')
-url='https://github.com/lhenr1que/Zonari'
+url='https://github.com/lhenr1que/HyperVi'
 license=('MIT' 'BSD-3-Clause')
 depends=('hyprland>=0.57' 'librsvg' 'cairo')
 makedepends=('git' 'gcc' 'make' 'pkgconf')
 optdepends=('gcc: automatic rebuild after a Hyprland update' 'make: automatic rebuild after a Hyprland update')
 provides=('zonari-bars-plugin')
 conflicts=('zonari-bars-plugin')
-source=("zonari::git+file://${ZONARI_SRC:-$PWD/../..}")
+source=("zonari::git+${ZONARI_SRC:+file://}${ZONARI_SRC:-https://github.com/lhenr1que/HyperVi.git}#branch=omarchy-plugin-0.57.2")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -22,7 +22,7 @@ pkgver() {
 }
 
 build() {
-  make -C zonari/plugin abi
+  make -C zonari/zonari-bars abi
 }
 
 package() {
