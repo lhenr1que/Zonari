@@ -84,7 +84,18 @@ end
 local function put(w, r)
   local sel = "address:" .. w.address
   hl.dispatch(hl.dsp.window.resize({ x = math.floor(r.w + 0.5), y = math.floor(r.h + 0.5), exact = true, window = sel }))
-  hl.dispatch(hl.dsp.window.move({ x = math.floor(r.x + 0.5), y = math.floor(r.y + 0.5), window = sel }))
+  local x, y = r.x, r.y
+  -- a client with a larger minimum size keeps it (OpenBot: 960 px wide): centre it on r, then keep it on the screen,
+  -- instead of the top-left of r, which Hyprland would centre and push past the screen edge
+  local now = hl.get_window(sel)
+  local aw, ah = xy(now and now.size or {}, "x", "y")
+  if (aw or 0) > r.w + 0.5 or (ah or 0) > r.h + 0.5 then
+    local a = w.monitor and work_area(w.monitor)
+    local function fit(v, len, alen, lo, span) v = v + (len - alen) / 2; return a and math.max(lo, math.min(v, lo + span - alen)) or v end
+    x, y = fit(r.x, r.w, aw, a and a.x, a and a.w), fit(r.y, r.h, ah, a and a.y, a and a.h)
+  end
+  hl.dispatch(hl.dsp.window.move({ x = math.floor(x + 0.5), y = math.floor(y + 0.5), window = sel }))
+  return { x = math.floor(x + 0.5), y = math.floor(y + 0.5), w = aw or r.w, h = ah or r.h } -- where it really went
 end
 
 local function target(opts)
@@ -98,7 +109,8 @@ end
 local function place(w, r, key)
   if not w.floating then return end
   local s = saved[w.address]
-  if s and s.key == key and geometry.same(rect_of(w), r) then
+  -- s.snap is where the last snap really put it (a window with a minimum size never matches r itself)
+  if s and s.key == key and (geometry.same(rect_of(w), r) or (s.snap and geometry.same(rect_of(w), s.snap))) then
     saved[w.address] = nil
     plugin_call("forget", w.address)
     put(w, s.rect)
@@ -111,8 +123,7 @@ local function place(w, r, key)
     if s.snap and not geometry.same(rect_of(w), s.snap) then s.rect, s.was_floating = rect_of(w), w.floating end
     s.key = key
   end
-  put(w, r)
-  saved[w.address].snap = r
+  saved[w.address].snap = put(w, r)
   local o = saved[w.address].rect
   plugin_call("remember", w.address, o.x, o.y, o.w, o.h, r.x, r.y, r.w, r.h)
   return true

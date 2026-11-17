@@ -134,7 +134,13 @@ local function run()
       for _, t in ipairs(w.tags) do if t ~= name then tags[#tags + 1] = t end end
       if a.tag:sub(1, 1) == "+" then tags[#tags + 1] = name end
       w.tags = tags
-    elseif kind == "resize" then assert(a.exact); w.size = { a.x, a.y }
+    elseif kind == "resize" then
+      assert(a.exact)
+      -- like Hyprland: a client's minimum size wins, and the window stays centred on the requested box
+      local min = w.min or { 0, 0 }
+      local nw, nh = math.max(a.x, min[1]), math.max(a.y, min[2])
+      w.at = { w.at[1] - (nw - a.x) // 2, w.at[2] - (nh - a.y) // 2 }
+      w.size = { nw, nh }
     elseif kind == "move" then
       if a.workspace then w.workspace = ws_lookup(a.workspace) else w.at = { a.x, a.y } end
     elseif kind == "alter_zorder" then
@@ -170,7 +176,7 @@ local function run()
     return n
   end
   local function rect(w, x, y, width, height)
-    assert(w.at[1] == x and w.at[2] == y and w.size[1] == width and w.size[2] == height, "wrong rectangle for " .. w.address)
+    assert(w.at[1] == x and w.at[2] == y and w.size[1] == width and w.size[2] == height, string.format("wrong rectangle for %s: %s,%s %sx%s, want %s,%s %sx%s", w.address, w.at[1], w.at[2], w.size[1], w.size[2], x, y, width, height))
   end
   local function state(file)
     local f = assert(io.open(tmp .. "/XDG_CONFIG_HOME/omniwm/" .. file, "r"))
@@ -239,6 +245,18 @@ local function run()
   rect(manual, 40, 50, 400, 300)
   kw.set_layout("off")
   CFG, kw.bar_height = nil, nil
+  -- a window that will not shrink below its minimum (OpenBot: 960 px wide) keeps it, inside the screen, centred on the zone
+  -- as far as the screen allows: the left half puts it at the left edge, not 80 px off screen
+  manual.min, manual.size = { 960, 0 }, { 960, 300 }
+  kw.tile("left")
+  rect(manual, 0, 0, 960, 1000)
+  kw.tile("left") -- the same snap again still restores, though the window never matched the half it asked for
+  rect(manual, 40, 50, 960, 300)
+  kw.tile("right")
+  rect(manual, 640, 0, 960, 1000)
+  kw.tile("right")
+  rect(manual, 40, 50, 960, 300)
+  manual.min, manual.size = nil, { 400, 300 }
   active = a
   kw.set_workspace_mode(1, "tiling")
   assert(home.tiled_layout == "dwindle" and not a.floating)
