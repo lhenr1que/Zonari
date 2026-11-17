@@ -1,17 +1,18 @@
-spike/events.log
-spike/hl-test/
-ui/target/
-spike/ui.log
-spike/menu.log
-spike/bars.log
-plugin/*.so
-plugin/*.o
-plugin/*.abi
+scripts/spikes/events.log
+scripts/spikes/hl-test/
+target/
+omniwm-ui/target/
+scripts/spikes/ui.log
+scripts/spikes/menu.log
+scripts/spikes/bars.log
+omniwm-bars/*.so
+omniwm-bars/*.o
+omniwm-bars/*.abi
 dist/
 .alethe/
 
 # machine-specific agent/tool config (generated, has local paths)
 .codex/config.toml
-plugin-0.56/*.so
-plugin-0.56/*.o
-plugin-0.56/*.abi
+omniwm-bars-0.56/*.so
+omniwm-bars-0.56/*.o
+omniwm-bars-0.56/*.abi

@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
-  "id": "hypervi",
-  "name": "HyperVi",
+  "id": "omniwm",
+  "name": "OmniWM",
   "version": "0.1.0",
   "author": "lhenr1que",
   "license": "MIT",
-  "description": "KWin-style window management for Hyprland 0.57: quick tile, zones, title bars, window menu. The bar widget shows its state and runs setup (omarchy/hypervi).",
+  "description": "KWin-style window management for Hyprland 0.57: quick tile, zones, title bars, window menu. The bar widget shows its state and runs setup (omarchy/omniwm).",
   "kinds": [
     "bar-widget"
   ],
   "entryPoints": {
-    "barWidget": "omarchy/HyperViWidget.qml"
+    "barWidget": "omarchy/OmniWMWidget.qml"
   },
   "barWidget": {
-    "displayName": "HyperVi",
-    "description": "HyperVi state; click for settings or setup, right click for the layout picker.",
+    "displayName": "OmniWM",
+    "description": "OmniWM state; click for settings or setup, right click for the layout picker.",
     "category": "Status",
     "allowMultiple": false,
     "defaultSection": "right"

@@ -1,4 +1,4 @@
-# Runs the project's single validation command (tools/check.sh) on every push and pull request.
+# Runs the project's single validation command (scripts/check.sh) on every push and pull request.
 # Arch Linux, because the plugin builds against the Hyprland headers Arch ships (0.57 at the time of writing):
 # a new Hyprland in Arch that breaks the plugin build shows up here first.
 name: check
@@ -19,8 +19,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Hyprland version
         run: pkg-config --modversion hyprland
-      - name: tools/check.sh
+      - name: scripts/check.sh
         # as a regular user: some tests check how unreadable files are handled, which root would read anyway
         run: |
           chown -R builder "$GITHUB_WORKSPACE"
-          su builder -c "cd '$GITHUB_WORKSPACE' && git config --global --add safe.directory '$GITHUB_WORKSPACE' && bash tools/check.sh"
+          su builder -c "cd '$GITHUB_WORKSPACE' && git config --global --add safe.directory '$GITHUB_WORKSPACE' && bash scripts/check.sh"

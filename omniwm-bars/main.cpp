@@ -1,0 +1,541 @@
+// SPDX-License-Identifier: BSD-3-Clause AND MIT
+// Derived from hyprbars (hyprwm/hyprland-plugins, BSD-3-Clause, Copyright (c) 2023 Hypr Development); changes MIT. See NOTICE.
+#define WLR_USE_UNSTABLE
+
+#include <unistd.h>
+
+#include <any>
+#include <hyprland/src/Compositor.hpp>
+#include <hyprland/src/desktop/view/window/Window.hpp>
+#include <hyprland/src/desktop/view/window/WindowPresentation.hpp>
+#include <hyprland/src/desktop/state/WindowState.hpp>
+#include <hyprland/src/desktop/state/FocusState.hpp>
+#include <hyprland/src/config/ConfigManager.hpp>
+#include <hyprland/src/config/shared/parserUtils/ParserUtils.hpp>
+#include <hyprland/src/render/Renderer.hpp>
+#include <hyprland/src/event/EventBus.hpp>
+#include <hyprland/src/desktop/rule/windowRule/WindowRuleEffectContainer.hpp>
+#include <hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp>
+#include <hyprland/src/config/lua/types/LuaConfigColor.hpp>
+#include <hyprland/src/state/MonitorState.hpp>
+
+#include <hyprutils/string/VarList.hpp>
+
+#include <algorithm>
+
+#include "barDeco.hpp"
+#include <hyprland/src/managers/eventLoop/EventLoopManager.hpp>
+#include "globals.hpp"
+#include "barInput.hpp"
+#include "hostDrag.hpp"
+#include "passLife.hpp"
+
+extern "C" {
+#include <lua.h>
+#include <lauxlib.h>
+}
+
+// Do NOT change this function.
+APICALL EXPORT std::string PLUGIN_API_VERSION() {
+    return HYPRLAND_API_VERSION;
+}
+
+// Only our own bar counts: Omarchy's titlebars (a hyprbars fork named "Hyprbar") attach to every window and draw on
+// floating-workspace windows only, so giving way to a Hyprbar left every window without a OmniWM bar. A visible
+// hyprbars is turned off by the config instead (omarchy/omniwm writes plugin.hyprbars.enabled = false).
+static void onNewWindow(PHLWINDOW window) {
+    if (!window->backend().traits().suggestsNoBorder) {
+        if (std::ranges::any_of(window->presentation().decorations(), [](const auto& d) { return d->getDisplayName() == "OmniwmBar"; }))
+            return;
+
+        auto bar    = makeShared<CHyprBar>(window);
+        bar->m_self = bar;
+        // publish only what the host took; on failure the bar dies here, before anyone saw it
+        if (!HyprlandAPI::addWindowDecoration(PHANDLE, window, SP<IHyprWindowDecoration>(bar)))
+            return;
+        g_pGlobalState->bars.emplace_back(bar);
+    }
+}
+
+static void onPreConfigReload() {
+    g_pGlobalState->buttons.clear();
+}
+
+// Breeze-like defaults when the config adds no button: pin at the left, close/maximize/minimize at the right
+// (the first button added sits outermost on the right).
+static void installDefaultButtons() {
+    if (!g_pGlobalState->buttons.empty() || !g_pGlobalState->config.defaultButtons->value())
+        return;
+
+    const auto none = CHyprColor(0, 0, 0, 0);
+    const auto fg   = CHyprColor(0.94, 0.94, 0.96, 1.0);
+    auto       add  = [&](std::string icon, std::string cmd, bool left, std::optional<CHyprColor> hover = std::nullopt) {
+        SHyprButton b;
+        b.icon = std::move(icon);
+        b.cmd = std::move(cmd);
+        b.bgcol = none;
+        b.fgcol = fg;
+        b.userfg = true;
+        b.size = 16;
+        b.alignSet = true;
+        b.left = left;
+        if (hover) {
+            b.hasHover = true;
+            b.hoverCol = *hover;
+        }
+        g_pGlobalState->buttons.push_back(std::move(b));
+    };
+    add("builtin:pin", "pin", true);
+    add("builtin:close", "close", false, CHyprColor(0.90, 0.28, 0.30, 1.0));
+    add("builtin:maximize", "maximize", false);
+    add("builtin:minimize", "minimize", false);
+}
+
+static void onConfigReloaded() {
+    installDefaultButtons();
+
+    for (auto& b : g_pGlobalState->bars) {
+        if (!b)
+            continue;
+
+        b->onConfigReloaded();
+    }
+}
+
+static void onUpdateWindowRules(PHLWINDOW window) {
+    const auto BARIT = std::find_if(g_pGlobalState->bars.begin(), g_pGlobalState->bars.end(), [window](const auto& bar) { return bar->getOwner() == window; });
+
+    if (BARIT == g_pGlobalState->bars.end())
+        return;
+
+    (*BARIT)->updateRules();
+    window->presentation().updateDecorations();
+}
+
+Hyprlang::CParseResult onNewButton(const char* K, const char* V) {
+    std::string                 v = V;
+    Hyprutils::String::CVarList vars(v);
+
+    Hyprlang::CParseResult      result;
+
+    // hyprbars-button = bgcolor, size, icon, action, fgcolor
+
+    if (vars[0].empty() || vars[1].empty()) {
+        result.setError("bgcolor and size cannot be empty");
+        return result;
+    }
+
+    float size = 10;
+    try {
+        size = std::stof(vars[1]);
+    } catch (std::exception& e) {
+        result.setError("failed to parse size");
+        return result;
+    }
+
+    bool userfg  = false;
+    auto fgcolor = Config::ParserUtils::parseColor("rgb(ffffff)");
+    auto bgcolor = Config::ParserUtils::parseColor(vars[0]);
+
+    if (!bgcolor) {
+        result.setError("invalid bgcolor");
+        return result;
+    }
+
+    if (vars.size() == 5) {
+        userfg  = true;
+        fgcolor = Config::ParserUtils::parseColor(vars[4]);
+    }
+
+    if (!fgcolor) {
+        result.setError("invalid fgcolor");
+        return result;
+    }
+
+    g_pGlobalState->buttons.push_back(SHyprButton{vars[3], userfg, *fgcolor, *bgcolor, size, vars[2]});
+
+    for (auto& b : g_pGlobalState->bars) {
+        b->m_bButtonsDirty = true;
+    }
+
+    return result;
+}
+
+int newLuaButton(lua_State* L) {
+    if (!lua_istable(L, 1))
+        return Config::Lua::Bindings::Internal::configError(L, "add_button: expected a table { bg_color, fg_color, size, icon, action }");
+
+    SHyprButton button;
+
+    {
+        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
+
+        lua_getfield(L, 1, "bg_color");
+
+        Config::Lua::CLuaConfigColor parser(0);
+        auto                         err = parser.parse(L);
+        if (err.errorCode != Config::Lua::PARSE_ERROR_OK)
+            return Config::Lua::Bindings::Internal::configError(L, "add_button: failed to parse bg_color");
+
+        button.bgcol = parser.parsed();
+    }
+
+    {
+        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
+
+        lua_getfield(L, 1, "fg_color");
+
+        Config::Lua::CLuaConfigColor parser(0);
+        auto                         err = parser.parse(L);
+        if (err.errorCode != Config::Lua::PARSE_ERROR_OK)
+            return Config::Lua::Bindings::Internal::configError(L, "add_button: failed to parse fg_color");
+
+        button.userfg = true;
+        button.fgcol = parser.parsed();
+    }
+
+    {
+        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
+
+        lua_getfield(L, 1, "size");
+
+        if (!lua_isnumber(L, -1))
+            return Config::Lua::Bindings::Internal::configError(L, "add_button: size must be an integer");
+
+        button.size = lua_tointeger(L, -1);
+    }
+
+    {
+        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
+
+        lua_getfield(L, 1, "icon");
+
+        if (!lua_isstring(L, -1))
+            return Config::Lua::Bindings::Internal::configError(L, "add_button: icon must be a string");
+
+        button.icon = lua_tostring(L, -1);
+    }
+
+    {
+        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
+
+        lua_getfield(L, 1, "action");
+
+        if (!lua_isstring(L, -1))
+            return Config::Lua::Bindings::Internal::configError(L, "add_button: action must be a string");
+
+        button.cmd = lua_tostring(L, -1);
+    }
+
+    {
+        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
+
+        lua_getfield(L, 1, "align");
+
+        if (lua_isstring(L, -1)) {
+            const std::string a = lua_tostring(L, -1);
+            button.alignSet     = a == "left" || a == "right";
+            button.left         = a == "left";
+        }
+    }
+
+    {
+        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
+
+        lua_getfield(L, 1, "hover_color");
+
+        if (!lua_isnil(L, -1)) {
+            Config::Lua::CLuaConfigColor parser(0);
+            auto                         err = parser.parse(L);
+            if (err.errorCode != Config::Lua::PARSE_ERROR_OK)
+                return Config::Lua::Bindings::Internal::configError(L, "add_button: failed to parse hover_color");
+
+            button.hasHover = true;
+            button.hoverCol = parser.parsed();
+        }
+    }
+
+    // applying the same settings twice (live apply plus a reload) must not stack identical buttons
+    if (std::ranges::any_of(g_pGlobalState->buttons, [&](const auto& b) { return b.icon == button.icon && b.cmd == button.cmd; }))
+        return 0;
+
+    g_pGlobalState->buttons.push_back(std::move(button));
+
+    for (auto& b : g_pGlobalState->bars) {
+        b->m_bButtonsDirty = true;
+    }
+
+    return 0;
+}
+
+// hl.plugin.omniwm.remember(address, ox, oy, ow, oh, sx, sy, sw, sh): the core tells us the geometry a window had before
+// it was snapped (o*) and the one the snap gave it (s*). Dragging the snapped window's bar then restores the old size.
+int luaRemember(lua_State* L) {
+    if (!lua_isstring(L, 1))
+        return Config::Lua::Bindings::Internal::configError(L, "remember: expected (address, ox, oy, ow, oh, sx, sy, sw, sh)");
+    double v[8];
+    for (int i = 0; i < 8; ++i) {
+        if (!lua_isnumber(L, 2 + i))
+            return Config::Lua::Bindings::Internal::configError(L, "remember: geometry values must be numbers");
+        v[i] = lua_tonumber(L, 2 + i);
+    }
+    const auto key                      = (uintptr_t)std::strtoull(lua_tostring(L, 1), nullptr, 0);
+    g_pGlobalState->restores[key] = SRestore{{v[0], v[1]}, {v[2], v[3]}, {v[4], v[5]}, {v[6], v[7]}};
+    return 0;
+}
+
+int luaForget(lua_State* L) {
+    if (!lua_isstring(L, 1))
+        return Config::Lua::Bindings::Internal::configError(L, "forget: expected (address)");
+    g_pGlobalState->restores.erase((uintptr_t)std::strtoull(lua_tostring(L, 1), nullptr, 0));
+    return 0;
+}
+
+// hl.plugin.omniwm.set_zone(monitor, name, x, y, w, h): the core publishes where each snap zone (left, right, top) puts a
+// window, so the drag preview shows exactly what the snap will do. clear_zones() forgets all of them.
+int luaSetZone(lua_State* L) {
+    if (!lua_isstring(L, 1) || !lua_isstring(L, 2))
+        return Config::Lua::Bindings::Internal::configError(L, "set_zone: expected (monitor, name, x, y, w, h)");
+    double v[4];
+    for (int i = 0; i < 4; ++i) {
+        if (!lua_isnumber(L, 3 + i))
+            return Config::Lua::Bindings::Internal::configError(L, "set_zone: geometry values must be numbers");
+        v[i] = lua_tonumber(L, 3 + i);
+    }
+    g_pGlobalState->zones[lua_tostring(L, 1)][lua_tostring(L, 2)] = SZone{{v[0], v[1]}, {v[2], v[3]}};
+    return 0;
+}
+
+// hl.plugin.omniwm.grab(mode, address): Move/Resize from the window menu, as in KWin. Alpha-1 (openspec
+// enable-titlebar-drag-alpha1, alt5-rc): the compositor's drag starts here and the compositor ends it with the next click;
+// bad arguments and a start the compositor refused are Lua errors (barInput.hpp).
+int luaGrab(lua_State* L) {
+    if (const auto ERR = KwIn::grabError(lua_isstring(L, 1), lua_isstring(L, 2), lua_isstring(L, 1) ? lua_tostring(L, 1) : ""); !ERR.empty())
+        return Config::Lua::Bindings::Internal::configError(L, ERR);
+    const std::string mode = lua_tostring(L, 1);
+    const auto        key  = (uintptr_t)std::strtoull(lua_tostring(L, 2), nullptr, 0);
+    bool found = false, focused = false, started = false;
+    for (auto& w : Desktop::windowState()->windows()) {
+        if ((uintptr_t)w.get() != key || !w->mapped() || w->isHidden())
+            continue;
+        found = true;
+        Desktop::focusState()->fullWindowFocus(w, Desktop::FOCUS_REASON_CLICK); // the compositor drags the focused window
+        focused = Desktop::focusState()->window() == w; // refused: a layer surface holds the keyboard; do not drag another window
+        started = focused && KwDrag::begin(mode == "move" ? MBIND_MOVE : MBIND_RESIZE) == KwDrag::BEGIN_STARTED;
+        break;
+    }
+    // every grab that did not start is a Lua error (openspec guard-titlebar-drag-start)
+    if (const auto ERR = KwIn::grabStartError(found, focused, started); !ERR.empty())
+        return Config::Lua::Bindings::Internal::configError(L, ERR);
+    return 0;
+}
+
+// Pointer motion arrives here before the pointer moves: a dragged window's bar may hold back the part that would cross a seam.
+static CFunctionHook* g_pMotionHook = nullptr;
+using MotionFn                      = void (*)(CInputManager*, IPointer::SMotionEvent);
+static void hkOnMouseMoved(CInputManager* self, IPointer::SMotionEvent e) {
+    for (auto& b : g_pGlobalState->bars)
+        if (b && b->holdAtSeam(e))
+            break;
+    ((MotionFn)g_pMotionHook->m_original)(self, e);
+}
+
+// hl.plugin.omniwm.set_bar_hidden(address, hidden): the window menu's "no title bar and frame".
+int luaSetBarHidden(lua_State* L) {
+    if (!lua_isstring(L, 1) || !lua_isboolean(L, 2))
+        return Config::Lua::Bindings::Internal::configError(L, "set_bar_hidden: expected (address, boolean)");
+    const auto key = (uintptr_t)std::strtoull(lua_tostring(L, 1), nullptr, 0);
+    if (lua_toboolean(L, 2))
+        g_pGlobalState->hiddenBars.insert(key);
+    else
+        g_pGlobalState->hiddenBars.erase(key);
+    for (auto& b : g_pGlobalState->bars)
+        if (b && (uintptr_t)b->getOwner().get() == key)
+            b->onFloatingChanged(); // re-places the bar, which now reserves (or frees) its height
+    return 0;
+}
+
+int luaClearZones(lua_State*) {
+    g_pGlobalState->zones.clear();
+    return 0;
+}
+
+
+APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
+    PHANDLE = handle;
+
+    const std::string HASH        = __hyprland_api_get_hash();
+    const std::string CLIENT_HASH = __hyprland_api_get_client_hash();
+
+    if (HASH != CLIENT_HASH) {
+        HyprlandAPI::addNotification(PHANDLE, "[omniwm-bars] Failure in initialization: Version mismatch (headers ver is not equal to running hyprland ver)",
+                                     CHyprColor{1.0, 0.2, 0.2, 1.0}, 5000);
+        throw std::runtime_error("[omniwm-bars] Version mismatch");
+    }
+
+    g_pGlobalState                    = makeUnique<SGlobalState>();
+    g_pGlobalState->nobarRuleIdx      = Desktop::Rule::windowEffects()->registerEffect("omniwm:no_bar");
+    g_pGlobalState->barColorRuleIdx   = Desktop::Rule::windowEffects()->registerEffect("omniwm:bar_color");
+    g_pGlobalState->titleColorRuleIdx = Desktop::Rule::windowEffects()->registerEffect("omniwm:title_color");
+
+    static auto P  = Event::bus()->m_events.window.open.listen([&](PHLWINDOW w) { onNewWindow(w); });
+    static auto P3 = Event::bus()->m_events.window.updateRules.listen([&](PHLWINDOW w) { onUpdateWindowRules(w); });
+
+    g_pGlobalState->config.barColor            = makeShared<Config::Values::CColorValue>("plugin:omniwm:bar_color", "Bar colour of the focused window", 0xf726262e);
+    g_pGlobalState->config.textColor           = makeShared<Config::Values::CColorValue>("plugin:omniwm:col.text", "Title colour of the focused window", 0xfff0f0f6);
+    g_pGlobalState->config.inactiveButtonColor = makeShared<Config::Values::CColorValue>(
+        "plugin:omniwm:inactive_button_color", "Change the inactive button's color. 0x00000000 means unset", 0x00000000);
+    g_pGlobalState->config.barHeight       = makeShared<Config::Values::CIntValue>("plugin:omniwm:bar_height", "Change the bar's height", 28);
+    g_pGlobalState->config.barTextSize     = makeShared<Config::Values::CIntValue>("plugin:omniwm:bar_text_size", "Change the bar's text size", 12);
+    g_pGlobalState->config.barTextWeight   = makeShared<Config::Values::CFontWeightValue>("plugin:omniwm:bar_text_weight", "Bar's title text weight (e.g. \"bold\" or an integer 100-1000)", 400);
+    g_pGlobalState->config.barTitleEnabled = makeShared<Config::Values::CBoolValue>("plugin:omniwm:bar_title_enabled", "Whether to enable titles in the bar", true);
+    g_pGlobalState->config.barBlur         = makeShared<Config::Values::CBoolValue>("plugin:omniwm:bar_blur", "Whether to enable blur of the bar", false);
+    g_pGlobalState->config.barTextFont     = makeShared<Config::Values::CStringValue>("plugin:omniwm:bar_text_font", "Bar's text font", "Sans");
+    g_pGlobalState->config.barTextAlign    = makeShared<Config::Values::CStringValue>("plugin:omniwm:bar_text_align", "Bar's text alignment", "left");
+    g_pGlobalState->config.barPartOfWindow =
+        makeShared<Config::Values::CBoolValue>("plugin:omniwm:bar_part_of_window", "Whether the bar is a part of the window (reserves space)", true);
+    g_pGlobalState->config.barPrecedenceOverBorder =
+        makeShared<Config::Values::CBoolValue>("plugin:omniwm:bar_precedence_over_border", "Whether the bar is before, or after the border", true);
+    g_pGlobalState->config.barButtonsAlignment = makeShared<Config::Values::CStringValue>("plugin:omniwm:bar_buttons_alignment", "Alignment of the bar buttons", "right");
+    g_pGlobalState->config.barPadding          = makeShared<Config::Values::CIntValue>("plugin:omniwm:bar_padding", "Padding of the bar", 7);
+    g_pGlobalState->config.barButtonPadding    = makeShared<Config::Values::CIntValue>("plugin:omniwm:bar_button_padding", "Padding of the bar buttons", 5);
+    g_pGlobalState->config.enabled             = makeShared<Config::Values::CBoolValue>("plugin:omniwm:enabled", "Whether bars are enabled", true);
+    g_pGlobalState->config.iconOnHover         = makeShared<Config::Values::CBoolValue>("plugin:omniwm:icon_on_hover", "Whether to use an icon on hover of the buttons", false);
+    g_pGlobalState->config.floatingOnly        = makeShared<Config::Values::CBoolValue>("plugin:omniwm:floating_only", "Draw bars on floating windows only", false);
+    g_pGlobalState->config.inactiveBarColor    = makeShared<Config::Values::CColorValue>("plugin:omniwm:inactive_bar_color", "Bar colour of an unfocused window", 0xe01c1c22);
+    g_pGlobalState->config.inactiveTextColor   = makeShared<Config::Values::CColorValue>("plugin:omniwm:inactive_col.text", "Title colour of an unfocused window", 0xffb8b8c4);
+    g_pGlobalState->config.seamResistance      = makeShared<Config::Values::CIntValue>("plugin:omniwm:seam_resistance", "Pixels of extra push needed to drag a window across the seam between two monitors (0 = off)", 200);
+    g_pGlobalState->config.snapTopEdge         = makeShared<Config::Values::CBoolValue>("plugin:omniwm:snap_top_edge", "Maximize a window dropped on the top screen edge", true);
+    g_pGlobalState->config.snapPreview         = makeShared<Config::Values::CBoolValue>("plugin:omniwm:snap_preview", "Show where a dragged window will land when it is released on a snap edge", true);
+    g_pGlobalState->config.previewColor        = makeShared<Config::Values::CColorValue>("plugin:omniwm:preview_color", "Colour of the snap preview (fill; the outline is the same colour, more opaque)", 0x407aa2f7);
+    g_pGlobalState->config.showIcon            = makeShared<Config::Values::CBoolValue>("plugin:omniwm:show_icon", "Show the app icon at the left of the bar", true);
+    g_pGlobalState->config.defaultButtons      = makeShared<Config::Values::CBoolValue>("plugin:omniwm:default_buttons", "Install the default buttons (pin, minimize, maximize, close) when none are configured", true);
+    g_pGlobalState->config.buttonHoverColor    = makeShared<Config::Values::CColorValue>("plugin:omniwm:button_hover_color", "Background of a hovered button", 0x33ffffff);
+    g_pGlobalState->config.pinnedColor         = makeShared<Config::Values::CColorValue>("plugin:omniwm:pinned_color", "Background of the pin button while the window is pinned", 0x667aa2f7);
+    g_pGlobalState->config.onDoubleClick       = makeShared<Config::Values::CStringValue>("plugin:omniwm:on_double_click", "Action on double click of the bar (same names as button actions)", "maximize");
+
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barColor);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.textColor);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.inactiveButtonColor);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barHeight);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barTextSize);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barTextWeight);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barTitleEnabled);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barBlur);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barTextFont);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barTextAlign);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barPartOfWindow);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barPrecedenceOverBorder);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barButtonsAlignment);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barPadding);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.barButtonPadding);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.enabled);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.iconOnHover);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.onDoubleClick);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.floatingOnly);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.inactiveBarColor);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.inactiveTextColor);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.seamResistance);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.snapTopEdge);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.snapPreview);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.previewColor);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.showIcon);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.defaultButtons);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.buttonHoverColor);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.pinnedColor);
+
+    HyprlandAPI::addLuaFunction(PHANDLE, "omniwm", "add_button", ::newLuaButton);
+    HyprlandAPI::addLuaFunction(PHANDLE, "omniwm", "remember", ::luaRemember);
+    HyprlandAPI::addLuaFunction(PHANDLE, "omniwm", "forget", ::luaForget);
+    HyprlandAPI::addLuaFunction(PHANDLE, "omniwm", "set_zone", ::luaSetZone);
+    HyprlandAPI::addLuaFunction(PHANDLE, "omniwm", "clear_zones", ::luaClearZones);
+    HyprlandAPI::addLuaFunction(PHANDLE, "omniwm", "set_bar_hidden", ::luaSetBarHidden);
+    HyprlandAPI::addLuaFunction(PHANDLE, "omniwm", "grab", ::luaGrab);
+    for (const auto& f : HyprlandAPI::findFunctionsByName(PHANDLE, "onMouseMoved"))
+        if (f.demangled.starts_with("CInputManager::onMouseMoved")) {
+            g_pMotionHook = HyprlandAPI::createFunctionHook(PHANDLE, f.address, (void*)&hkOnMouseMoved);
+            if (g_pMotionHook && !g_pMotionHook->hook())
+                g_pMotionHook = nullptr;
+            break;
+        }
+    if (!g_pMotionHook)
+        HyprlandAPI::addNotification(PHANDLE, "[omniwm] Could not hook pointer motion: seam resistance is off.", CHyprColor{1.0, 0.4, 0.2, 1.0}, 8000);
+    // Shift mid-drag may stop the compositor's move: the dragging bar starts it again on the next motion (alt5-rc: only a
+    // start; no deferred callback, which could outlive the plugin)
+    static auto PK = Event::bus()->m_events.input.keyboard.key.listen([&](IKeyboard::SKeyEvent e, Event::SCallbackInfo&) {
+        if (e.keycode == KEY_LEFTSHIFT || e.keycode == KEY_RIGHTSHIFT)
+            for (auto& b : g_pGlobalState->bars)
+                if (b)
+                    b->onShift();
+    });
+    // window keys are pointers and get reused: forget what was kept for a window when it closes
+    static auto PC = Event::bus()->m_events.window.close.listen([&](PHLWINDOW w) {
+        const auto key = (uintptr_t)w.get();
+        g_pGlobalState->hiddenBars.erase(key);
+        g_pGlobalState->restores.erase(key);
+    });
+    // any click puts the button tooltip away until the pointer leaves the button (KDE); the release of a press a bar took
+    // is the bar's too, wherever the pointer went and even if the bar is gone (barInput.hpp)
+    static auto PG = Event::bus()->m_events.input.mouse.button.listen([&](IPointer::SButtonEvent e, Event::SCallbackInfo& info) {
+        if (e.state == WL_POINTER_BUTTON_STATE_PRESSED) {
+            tipHide(false);
+            g_pGlobalState->tip.pressed = true;
+        } else if (g_pGlobalState->pairs.onRelease(e.button).cancel)
+            info.cancelled = true;
+    });
+    static auto P7 = Event::bus()->m_events.window.active.listen([&](PHLWINDOW, Desktop::eFocusReason) {
+        // active/inactive colours: every bar repaints and re-renders its title when focus moves
+        for (auto& b : g_pGlobalState->bars)
+            if (b)
+                b->onFocusChanged();
+    });
+    static auto P6 = Event::bus()->m_events.window.floating.listen([&](PHLWINDOW w) {
+        // floating_only: a bar appears or disappears when the window changes mode
+        for (auto& b : g_pGlobalState->bars)
+            if (b && b->getOwner() == w)
+                b->onFloatingChanged();
+    });
+    // the button tooltip goes after every window: drawn with its bar it would sit under the bar's own window
+    static auto PR = Event::bus()->m_events.render.stage.listen([&](const Event::SRenderStageEvent& e) {
+        if (e.stage != RENDER_POST_WINDOWS || !e.context || !e.monitor)
+            return;
+        if (const auto& tip = g_pGlobalState->tip; !tip.bar.expired())
+            tip.bar->drawTip(e.context->get(), e.monitor);
+    });
+    static auto P4 = Event::bus()->m_events.config.preReload.listen([&] { onPreConfigReload(); });
+    static auto P5 = Event::bus()->m_events.config.reloaded.listen([&] { onConfigReloaded(); });
+
+    // add deco to existing windows
+    for (auto& w : Desktop::windowState()->windows()) {
+        if (w->isHidden() || !w->mapped())
+            continue;
+
+        onNewWindow(w);
+    }
+
+    HyprlandAPI::reloadConfig();
+
+    return {"omniwm-bars", "Title bars for OmniWM (fork of hyprbars).", "lhenr1que, Vaxry (hyprbars)", "0.1"};
+}
+
+APICALL EXPORT void PLUGIN_EXIT() {
+    for (auto& m : State::monitorState()->monitors())
+        m->m_scheduledRecalc = true;
+
+    // Q1 (docs/port-0-57/QUIESCENCE.md): our passes live in the render session and the host destroys them on reset(); an
+    // unload during a session is out of contract and cannot be vetoed, so it is only logged
+    if (g_pHyprRenderer->context().active())
+        Log::logger->log(Log::ERR, "omniwm-bars", "unload during an active render session (Q1 violated): queued bar passes may outlive the library");
+    if (KwPass::g_live != 0)
+        Log::logger->log(Log::ERR, "omniwm-bars", "unload with {} pass element(s) of this library alive (Q1 violated)", KwPass::g_live);
+
+    // the event loop keeps its own reference to the tooltip timer, and its callback is code of this library
+    tipHide(true);
+    if (g_pGlobalState->tip.timer)
+        g_pEventLoopManager->removeTimer(g_pGlobalState->tip.timer);
+    g_pGlobalState->tip.timer.reset();
+
+    Desktop::Rule::windowEffects()->unregisterEffect(g_pGlobalState->barColorRuleIdx);
+    Desktop::Rule::windowEffects()->unregisterEffect(g_pGlobalState->titleColorRuleIdx);
+    Desktop::Rule::windowEffects()->unregisterEffect(g_pGlobalState->nobarRuleIdx);
+}

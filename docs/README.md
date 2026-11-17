@@ -1,4 +1,4 @@
-# Documentação do HyperVi
+# Documentação do OmniWM
 
 Consolidação de 29/10/2026, baseada no código do commit `a2506c63dad16384414dc95919b8292aead284df` e no pacote de produto de 28/10. Esta reorganização altera somente documentação. O nome atual identifica o repositório e não decide a identidade definitiva da suíte.
 
@@ -10,7 +10,7 @@ Consolidação de 29/10/2026, baseada no código do commit `a2506c63dad16384414d
 | Instalar e conhecer os recursos atuais | [README do projeto](../README.md), [plugin](PLUGIN.md) |
 | Consultar interfaces e formatos existentes | [API](API.md), [opções configuráveis](CONFIGURAVEL.md) |
 | Ver requisitos observáveis e mudanças | [Specs principais](../openspec/specs/), [mudanças](../openspec/changes/), [configuração do workflow](../openspec/config.yaml) |
-| Contribuir e verificar trabalho | [Contribuição](CONTRIBUTING.md), [testes](TESTING.md), [regras para agentes](../AGENTS.md) |
+| Contribuir e verificar trabalho | [Contribuição](../CONTRIBUTING.md), [testes](TESTING.md), [regras para agentes](../AGENTS.md) |
 | Saber o que foi verificado e o que falta | [Status e testes pendentes](STATUS.md) |
 | Entender a evolução da suíte | [Produto](product/README.md), [decisões](product/DECISIONS.md) |
 | Consultar origens e documentos substituídos | [Histórico](history/README.md), [manifesto completo](history/product-import/2026-10-28/MANIFEST.md) |

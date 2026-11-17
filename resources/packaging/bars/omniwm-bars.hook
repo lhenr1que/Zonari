@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = hyprland
+
+[Action]
+Description = Rebuilding the omniwm-bars plugin for the new Hyprland...
+When = PostTransaction
+Exec = /usr/bin/omniwm-bars-rebuild

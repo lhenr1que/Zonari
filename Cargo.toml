@@ -1,0 +1,3 @@
+[workspace]
+members = ["omniwm-ui"]
+resolver = "2"
