@@ -55,6 +55,12 @@ lua_safe() { case $1 in *\"* | *\\* | *$'\n'*) die "path not supported (quote, b
 
 build_ui() {
   say "building zonari-ui (cargo, a few minutes the first time)"
+  mkdir -p "$share"
+  # receipt: the exact build-cache directory setup created (device:inode); remove deletes only that one
+  if [ ! -e "$share/target" ]; then
+    mkdir -p "$share/target"
+    stat -c '%d:%i' "$share/target" >"$share/.target-created"
+  fi
   CARGO_TARGET_DIR="$share/target" cargo build --release --locked --manifest-path "$root/crates/zonari-ui/Cargo.toml"
   mkdir -p "$share/bin" "$bin"
   # ours = byte-identical to the copy this setup kept last time; anything else at that path belongs to someone else
@@ -246,8 +252,19 @@ cmd_remove() {
   fi
   if [ -f "$bin/zonari-ui" ] && [ -f "$share/bin/zonari-ui" ] && cmp -s "$bin/zonari-ui" "$share/bin/zonari-ui"; then rm -f "$bin/zonari-ui"; fi
   if plugin_loaded; then hyprctl plugin unload "$share/zonari-bars.so" >/dev/null 2>&1 || true; fi
-  # only what setup creates, then the directory if nothing else is left in it
-  rm -rf -- "$share/target" "$share/bin/zonari-ui"
+  # only what setup creates; the build cache goes only when setup created this exact directory, and the data directory
+  # only if it is then empty
+  if [ -f "$share/.target-created" ] || [ -L "$share/.target-created" ]; then
+    if [ -d "$share/target" ] && [ "$(stat -c '%d:%i' "$share/target" 2>/dev/null)" = "$(cat "$share/.target-created")" ]; then
+      rm -rf -- "$share/target"
+    elif [ -e "$share/target" ] || [ -L "$share/target" ]; then
+      say "leaving $share/target alone: it is not the directory setup created"
+    fi
+    rm -f -- "$share/.target-created"
+  elif [ -e "$share/target" ] || [ -L "$share/target" ]; then
+    say "leaving $share/target alone: setup did not create it"
+  fi
+  rm -f -- "$share/bin/zonari-ui"
   rm -f -- "$share"/zonari-bars.so "$share"/zonari-bars.abi "$share"/zonari.lua.sha256 "$share"/.abi.tmp "$share"/.zonari-bars.so.??????
   rmdir "$share/bin" "$share" 2>/dev/null || true
   say "removed. Reload Hyprland (hyprctl reload). The plugin itself goes with: omarchy plugin remove zonari"

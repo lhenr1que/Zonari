@@ -253,6 +253,39 @@ seed foreign; mkdir -p "$t/home-foreign/.local/bin"; echo mine >"$t/home-foreign
 run foreign 0.57.2 0.57.2 remove
 [ "$(cat "$t/home-foreign/.local/bin/zonari-ui" 2>/dev/null)" = mine ] && ok "remove: keeps a zonari-ui it did not install" || bad "remove: deleted a foreign zonari-ui"
 
+# remove keeps a build cache it did not create; a data directory that already existed does not make setup's own cache foreign
+seed pretarget
+mkdir -p "$t/home-pretarget/.local/share/zonari/target"
+echo keep >"$t/home-pretarget/.local/share/zonari/target/keep"
+echo notes >"$t/home-pretarget/.local/share/zonari/notes.txt"
+run pretarget 0.57.2 0.57.2 setup; rc=$?
+[ "$rc" = 0 ] && [ "$(cat "$t/home-pretarget/.local/share/zonari/target/keep" 2>/dev/null)" = keep ] \
+  && ok "setup: builds with a pre-existing target directory" || bad "setup with a pre-existing target (exit $rc): $(cat "$t/out-pretarget")"
+run pretarget 0.57.2 0.57.2 remove; rc=$?
+if [ "$rc" = 0 ] && [ "$(cat "$t/home-pretarget/.local/share/zonari/target/keep" 2>/dev/null)" = keep ] \
+  && [ "$(cat "$t/home-pretarget/.local/share/zonari/notes.txt" 2>/dev/null)" = notes ] \
+  && [ ! -e "$t/home-pretarget/.local/share/zonari/zonari-bars.so" ] && [ ! -e "$t/home-pretarget/.local/share/zonari/bin" ]; then
+  ok "remove: keeps a target directory setup did not create"
+else bad "remove with a pre-existing target (exit $rc): $(cat "$t/out-pretarget")"; fi
+
+seed predata
+mkdir -p "$t/home-predata/.local/share/zonari"
+echo notes >"$t/home-predata/.local/share/zonari/notes.txt"
+run predata 0.57.2 0.57.2 setup
+run predata 0.57.2 0.57.2 remove; rc=$?
+if [ "$rc" = 0 ] && [ "$(cat "$t/home-predata/.local/share/zonari/notes.txt" 2>/dev/null)" = notes ] \
+  && [ ! -e "$t/home-predata/.local/share/zonari/target" ] && [ ! -e "$t/home-predata/.local/share/zonari/zonari-bars.so" ]; then
+  ok "remove: deletes the target directory setup created, keeps other data"
+else bad "remove with a pre-existing data directory (exit $rc): $(cat "$t/out-predata")"; fi
+
+seed swapped
+run swapped 0.57.2 0.57.2 setup
+rm -rf "$t/home-swapped/.local/share/zonari/target"
+mkdir -p "$t/home-swapped/.local/share/zonari/target"; echo keep >"$t/home-swapped/.local/share/zonari/target/keep"
+run swapped 0.57.2 0.57.2 remove; rc=$?
+[ "$rc" = 0 ] && [ "$(cat "$t/home-swapped/.local/share/zonari/target/keep" 2>/dev/null)" = keep ] \
+  && ok "remove: keeps a target directory that replaced the one setup created" || bad "remove after target replacement (exit $rc): $(cat "$t/out-swapped")"
+
 # migration: data from before the rename (~/.config/kwinish) is copied to ~/.config/zonari once; the old folder stays
 seed mig; mkdir -p "$t/home-mig/.config/kwinish"; echo '{"bar_height": 30}' >"$t/home-mig/.config/kwinish/settings.json"; echo grid >"$t/home-mig/.config/kwinish/layout"
 run mig 0.57.2 0.57.2 setup; rc=$?
