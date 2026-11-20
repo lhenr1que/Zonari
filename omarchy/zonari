@@ -57,6 +57,12 @@ build_ui() {
   say "building zonari-ui (cargo, a few minutes the first time)"
   CARGO_TARGET_DIR="$share/target" cargo build --release --locked --manifest-path "$root/crates/zonari-ui/Cargo.toml"
   mkdir -p "$share/bin" "$bin"
+  # ours = byte-identical to the copy this setup kept last time; anything else at that path belongs to someone else
+  if [ -e "$bin/zonari-ui" ] || [ -L "$bin/zonari-ui" ]; then
+    if [ -f "$share/bin/zonari-ui" ] && [ ! -L "$bin/zonari-ui" ] && cmp -s "$bin/zonari-ui" "$share/bin/zonari-ui"; then :
+    elif [ -t 0 ] && [ -t 1 ] && command -v gum >/dev/null && gum confirm --default=false "$bin/zonari-ui exists and was not installed by Zonari setup. Replace it?"; then :
+    else die "$bin/zonari-ui exists and was not installed by Zonari setup: not replacing it (move it away and run setup again)"; fi
+  fi
   install -m755 "$share/target/release/zonari-ui" "$share/bin/zonari-ui"
   local tmp; tmp=$(mktemp "$bin/.zonari-ui.XXXXXX")
   install -m755 "$share/bin/zonari-ui" "$tmp"; mv -f "$tmp" "$bin/zonari-ui"
@@ -230,7 +236,9 @@ cmd_remove() {
     say "removed the require line from $main"
   fi
   if [ -f "$inc" ]; then
-    if [ -f "$share/zonari.lua.sha256" ] && [ "$(sha256sum "$inc" | cut -d' ' -f1)" = "$(cat "$share/zonari.lua.sha256")" ]; then
+    if [ ! -f "$share/zonari.lua.sha256" ]; then
+      say "$inc was not written by setup: leaving it alone"
+    elif [ "$(sha256sum "$inc" | cut -d' ' -f1)" = "$(cat "$share/zonari.lua.sha256")" ]; then
       rm -f "$inc"
     else
       mv -f "$inc" "$inc.removed-$(date +%Y%m%d%H%M%S)"; say "you had edited $inc: kept it as $inc.removed-*"
@@ -238,7 +246,10 @@ cmd_remove() {
   fi
   if [ -f "$bin/zonari-ui" ] && [ -f "$share/bin/zonari-ui" ] && cmp -s "$bin/zonari-ui" "$share/bin/zonari-ui"; then rm -f "$bin/zonari-ui"; fi
   if plugin_loaded; then hyprctl plugin unload "$share/zonari-bars.so" >/dev/null 2>&1 || true; fi
-  [ -d "$share" ] && rm -rf -- "$share"
+  # only what setup creates, then the directory if nothing else is left in it
+  rm -rf -- "$share/target" "$share/bin/zonari-ui"
+  rm -f -- "$share"/zonari-bars.so "$share"/zonari-bars.abi "$share"/zonari.lua.sha256 "$share"/.abi.tmp "$share"/.zonari-bars.so.??????
+  rmdir "$share/bin" "$share" 2>/dev/null || true
   say "removed. Reload Hyprland (hyprctl reload). The plugin itself goes with: omarchy plugin remove zonari"
 }
 
